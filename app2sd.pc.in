@@ -1,0 +1,12 @@
+# Package information for app2sd
+prefix=/usr
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: app2sd
+Description: The app2sd Library
+Version: 1.1.0
+Requires: vconf dlog
+Cflags: -I${includedir}
+Libs: -L${libdir} -lapp2sd -lapp2ext
