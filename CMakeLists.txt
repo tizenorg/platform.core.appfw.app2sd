@@ -1,0 +1,53 @@
+CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
+#SET(CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS true)
+PROJECT(app2ext C)
+
+SET(VERSION_MAJOR 0)
+SET(VERSION "${VERSION_MAJOR}.4.2")
+
+#Add your submodule directory name
+ADD_SUBDIRECTORY(plugin/app2sd)
+### Required packages
+INCLUDE(FindPkgConfig)
+pkg_check_modules(pkgs REQUIRED dlog)
+
+FOREACH(flag ${pkgs_CFLAGS})
+	SET(EXTRA_CFLAGS "${EXTRA_CFLAGS} ${flag}")
+ENDFOREACH(flag)
+
+pkg_check_modules(libpkgs REQUIRED dlog)
+
+FOREACH(flag ${libpkgs_CFLAGS})
+	SET(EXTRA_CFLAGS "${EXTRA_CFLAGS} ${flag}")
+ENDFOREACH(flag)
+
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${EXTRA_CFLAGS}")
+
+### Local include directories
+INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/inc ${CMAKE_SOURCE_DIR}/src)
+
+## build app2ext library
+SET(app2ext_dir "${CMAKE_SOURCE_DIR}")
+SET(app2ext_inc_dir "${app2ext_dir}/inc")
+SET(app2ext_src_dir "${app2ext_dir}/src")
+SET(APP2EXT "app2ext")
+SET(libapp2ext_SOURCES ${app2ext_src_dir}/app2ext_interface.c)
+SET(libapp2ext_LDFLAGS " -L/usr/lib -module -avoid-version -ldl ")
+SET(libapp2ext_CFLAGS  " ${CFLAGS} -fPIC -I${app2ext_inc_dir} ")
+
+ADD_LIBRARY(${APP2EXT} SHARED ${libapp2ext_SOURCES})
+SET_TARGET_PROPERTIES(${APP2EXT} PROPERTIES SOVERSION ${VERSION_MAJOR})
+SET_TARGET_PROPERTIES(${APP2EXT} PROPERTIES VERSION ${VERSION})
+SET_TARGET_PROPERTIES(${APP2EXT} PROPERTIES COMPILE_FLAGS "${libapp2ext_CFLAGS}")
+TARGET_LINK_LIBRARIES(${APP2EXT} ${libpkgs_LDFLAGS})
+
+SET(CMAKE_INSTALL_PREFIX "/usr")
+SET(PREFIX ${CMAKE_INSTALL_PREFIX})
+
+
+CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/app2sd.pc.in ${CMAKE_BINARY_DIR}/app2sd.pc @ONLY)
+
+INSTALL(TARGETS ${APP2EXT} DESTINATION lib COMPONENT RuntimeLibraries)
+INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/app2sd.pc DESTINATION lib/pkgconfig)
+INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/inc/app2ext_interface.h DESTINATION include)
+
