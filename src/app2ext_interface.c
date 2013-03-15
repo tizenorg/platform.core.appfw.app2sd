@@ -150,3 +150,63 @@ int app2ext_get_app_location(const char *appname)
 		}
 	}
 }
+
+int app2ext_enable_external_pkg(const char *pkgid)
+{
+	/*Validate the function parameter received */
+	if (pkgid == NULL) {
+		app2ext_print("invalid func parameters\n");
+		return -1;
+	}
+	FILE *fp = NULL;
+	app2ext_handle *app2_handle = NULL;
+	char app_mmc_path[FILENAME_MAX] = { 0, };
+	snprintf(app_mmc_path, FILENAME_MAX, "%s%s", APP2SD_PATH, pkgid);
+
+	/*check whether application is in external memory or not */
+	fp = fopen(app_mmc_path, "r");
+	if (fp != NULL) {
+		fclose(fp);
+		fp = NULL;
+
+		app2_handle = app2ext_init(APP2EXT_SD_CARD);
+		if (app2_handle == NULL) {
+			app2ext_print("app2_handle : app2ext init failed\n");
+			return -2;
+		}
+
+		app2_handle->interface.enable(pkgid);
+		app2ext_deinit(app2_handle);
+	}
+	return 0;
+}
+
+int app2ext_disable_external_pkg(const char *pkgid)
+{
+	/*Validate the function parameter received */
+	if (pkgid == NULL) {
+		app2ext_print("invalid func parameters\n");
+		return -1;
+	}
+	FILE *fp = NULL;
+	app2ext_handle *app2_handle = NULL;
+	char app_mmc_path[FILENAME_MAX] = { 0, };
+	snprintf(app_mmc_path, FILENAME_MAX, "%s%s", APP2SD_PATH, pkgid);
+
+	/*check whether application is in external memory or not */
+	fp = fopen(app_mmc_path, "r");
+	if (fp != NULL) {
+		fclose(fp);
+		fp = NULL;
+
+		app2_handle = app2ext_init(APP2EXT_SD_CARD);
+		if (app2_handle == NULL) {
+			app2ext_print("app2_handle : app2ext init failed\n");
+			return -2;
+		}
+
+		app2_handle->interface.disable(pkgid);
+		app2ext_deinit(app2_handle);
+	}
+	return 0;
+}

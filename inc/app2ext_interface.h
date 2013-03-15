@@ -396,6 +396,42 @@ if (ret == APP2EXT_SD_CARD) {
  */
 API int app2ext_get_app_location(const char *appname);
 
+/**
+ * @brief : This API enable the package which is located in external memory
+ * @param[in] pkgid	package id
+ * @return	error < 0  if pkg enable fail ,
+ @code
+ #include <app2ext_interface.h>
+int ret = -1;
+
+ret = app2ext_enable_external_pkg("com.samsung.calculator");
+if (ret < 0) {
+	printf("\n pkg is not enabled ");
+} else {
+	printf("\n pkg is enabled ");
+}
+ @endcode
+ */
+API int app2ext_enable_external_pkg(const char *pkgid);
+
+/**
+ * @brief : This API disable the package which is located in external memory
+ * @param[in] pkgid	package id
+ * @return	error < 0  if pkg enable fail ,
+ @code
+ #include <app2ext_interface.h>
+int ret = -1;
+
+ret = app2ext_disable_external_pkg("com.samsung.calculator");
+if (ret < 0) {
+	printf("\n pkg is not enabled ");
+} else {
+	printf("\n pkg is enabled ");
+}
+ @endcode
+ */
+API int app2ext_disable_external_pkg(const char *pkgid);
+
 #ifdef __cplusplus
 }
 #endif

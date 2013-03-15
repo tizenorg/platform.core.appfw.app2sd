@@ -1,7 +1,7 @@
 Name:       app2sd
 Summary:    Application installation on external memory
 Version:    0.5
-Release:    8
+Release:    9
 Group:      TO_BE/FILLED_IN
 License:    Apache2.0
 Source0:    %{name}-%{version}.tar.gz
