@@ -370,7 +370,7 @@ int _app2sd_create_file_system(const char *device_path)
 	}
 
 	/*Format the filesystem [create a filesystem]*/
-	const char *argv[] = { "mkfs.ext4", device_path, NULL };
+	const char *argv[] = { "/sbin/mkfs.ext4", device_path, NULL };
 	fp = fopen(device_path, "r+");
 	if (fp == NULL) {
 		app2ext_print

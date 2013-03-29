@@ -32,8 +32,10 @@ SET(app2ext_inc_dir "${app2ext_dir}/inc")
 SET(app2ext_src_dir "${app2ext_dir}/src")
 SET(APP2EXT "app2ext")
 SET(libapp2ext_SOURCES ${app2ext_src_dir}/app2ext_interface.c)
-SET(libapp2ext_LDFLAGS " -L/usr/lib -module -avoid-version -ldl ")
+SET(libapp2ext_LDFLAGS " -L${LIB_INSTALL_DIR} -module -avoid-version -ldl ")
 SET(libapp2ext_CFLAGS  " ${CFLAGS} -fPIC -I${app2ext_inc_dir} ")
+
+ADD_DEFINITIONS("-DLIBPREFIX=\"${LIB_INSTALL_DIR}\"")
 
 ADD_LIBRARY(${APP2EXT} SHARED ${libapp2ext_SOURCES})
 SET_TARGET_PROPERTIES(${APP2EXT} PROPERTIES SOVERSION ${VERSION_MAJOR})
@@ -44,10 +46,11 @@ TARGET_LINK_LIBRARIES(${APP2EXT} ${libpkgs_LDFLAGS})
 SET(CMAKE_INSTALL_PREFIX "/usr")
 SET(PREFIX ${CMAKE_INSTALL_PREFIX})
 
+CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/app2sd.manifest.in ${CMAKE_BINARY_DIR}/app2sd.manifest @ONLY)
 
 CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/app2sd.pc.in ${CMAKE_BINARY_DIR}/app2sd.pc @ONLY)
 
-INSTALL(TARGETS ${APP2EXT} DESTINATION lib COMPONENT RuntimeLibraries)
-INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/app2sd.pc DESTINATION lib/pkgconfig)
+INSTALL(TARGETS ${APP2EXT} DESTINATION ${LIB_INSTALL_DIR} COMPONENT RuntimeLibraries)
+INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/app2sd.pc DESTINATION ${LIB_INSTALL_DIR}/pkgconfig)
 INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/inc/app2ext_interface.h DESTINATION include)
 

@@ -26,7 +26,7 @@ SET(app2sd_inc_dir "${app2sd_dir}/inc")
 SET(app2sd_src_dir "${app2sd_dir}/src")
 SET(APP2SD "app2sd")
 SET(libapp2sd_SOURCES ${app2sd_src_dir}/app2sd_internals.c ${app2sd_src_dir}/app2sd_interface.c ${app2sd_src_dir}/app2sd_internals_registry.c ${app2sd_src_dir}/app2sd_internals_utils.c)
-SET(libapp2sd_LDFLAGS " -L/usr/lib -lcrypto -module -avoid-version ")
+SET(libapp2sd_LDFLAGS " -L${LIB_INSTALL_DIR} -lcrypto -module -avoid-version ")
 SET(libapp2sd_CFLAGS  " ${CFLAGS} -fPIC -I${app2sd_inc_dir} ")
 
 ADD_LIBRARY(${APP2SD} SHARED ${libapp2sd_SOURCES})
@@ -39,6 +39,6 @@ SET(CMAKE_INSTALL_PREFIX "/usr")
 SET(PREFIX ${CMAKE_INSTALL_PREFIX})
 
 
-INSTALL(TARGETS ${APP2SD} DESTINATION lib COMPONENT RuntimeLibraries)
+INSTALL(TARGETS ${APP2SD} DESTINATION ${LIB_INSTALL_DIR} COMPONENT RuntimeLibraries)
 
 

@@ -28,7 +28,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#define APP2EXT_SD_PLUGIN_PATH	"/usr/lib/libapp2sd.so"
+#define APP2EXT_SD_PLUGIN_PATH	LIBPREFIX "/libapp2sd.so"
 
 app2ext_handle *app2ext_init(int storage_type)
 {

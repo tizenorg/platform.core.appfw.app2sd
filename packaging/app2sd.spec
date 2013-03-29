@@ -2,12 +2,10 @@ Name:       app2sd
 Summary:    Application installation on external memory
 Version:    0.5
 Release:    9
-Group:      TO_BE/FILLED_IN
-License:    Apache2.0
+Group:      Application Framework/Application Installer
+License:    Apache-2.0
 Source0:    %{name}-%{version}.tar.gz
 
-Requires(post): /sbin/ldconfig
-Requires(postun): /sbin/ldconfig
 BuildRequires:  pkgconfig(libssl)
 BuildRequires:  pkgconfig(vconf)
 BuildRequires:  pkgconfig(dlog)
@@ -30,7 +28,7 @@ Tizen application installation on external memory (devel)
 %setup -q
 
 %build
-cmake . -DCMAKE_INSTALL_PREFIX=%{_prefix}
+%cmake .
 
 make %{?jobs:-j%jobs}
 

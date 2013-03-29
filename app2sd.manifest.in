@@ -1,0 +1,15 @@
+<manifest>
+	<define>
+		<domain name="app2sd"/>
+	</define>
+	<request>
+		<domain name="app2sd"/>
+	</request>
+	<assign>
+		<filesystem path="@LIB_INSTALL_DIR@/libapp2ext.so.0" label="_"/>
+		<filesystem path="@LIB_INSTALL_DIR@/libapp2ext.so.0.4.2" label="_"/>
+		<filesystem path="@LIB_INSTALL_DIR@/libapp2sd.so" label="_"/>
+		<filesystem path="@LIB_INSTALL_DIR@/libapp2sd.so.0" label="_"/>
+		<filesystem path="@LIB_INSTALL_DIR@/libapp2sd.so.0.4.2" label="_"/>
+	</assign>
+</manifest>
