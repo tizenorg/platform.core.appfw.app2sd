@@ -271,7 +271,15 @@ char *_app2sd_encrypt_device(const char *device, const char *pkgid,
 		close(1);
 		close(2);
 		result = dup(my_pipe[1]);
+		if (result < 0) {
+			fprintf(stderr, "dup failed %d....%s\n", errno, strerror(errno));
+			_exit(-1);
+		}
 		result = dup(my_pipe[1]);
+		if (result < 0) {
+			fprintf(stderr, "dup failed %d....%s\n", errno, strerror(errno));
+			_exit(-1);
+		}
 		if (execvp(argv[0], (char *const *)argv) < 0) {
 			fprintf(stderr, "execvp failed %d....%s\n", errno, strerror(errno));	/*Don't use d_msg_app2sd */
 		}
@@ -280,6 +288,8 @@ char *_app2sd_encrypt_device(const char *device, const char *pkgid,
 		/* parent */
 		close(my_pipe[1]);
 		result = read(my_pipe[0], buf, FILENAME_MAX);
+		if (result < 0)
+			fprintf(stderr, "read failed %d....%s\n", errno, strerror(errno));
 		break;
 	}
 
@@ -316,7 +326,15 @@ char *_app2sd_detach_loop_device(const char *device)
 		close(1);
 		close(2);
 		result = dup(my_pipe[1]);
+		if (result < 0) {
+			fprintf(stderr, "dup failed %d....%s\n", errno, strerror(errno));
+			_exit(-1);
+		}
 		result = dup(my_pipe[1]);
+		if (result < 0) {
+			fprintf(stderr, "dup failed %d....%s\n", errno, strerror(errno));
+			_exit(-1);
+		}
 		if (execvp(argv[0], (char *const *)argv) < 0) {
 			fprintf(stderr, "execvp failed\n");	/*Don't use d_msg_app2sd */
 		}
@@ -325,6 +343,8 @@ char *_app2sd_detach_loop_device(const char *device)
 		/* parent */
 		close(my_pipe[1]);
 		result = read(my_pipe[0], buf, FILENAME_MAX);
+		if (result < 0)
+			fprintf(stderr, "read failed %d....%s\n", errno, strerror(errno));
 		break;
 	}
 
@@ -362,7 +382,15 @@ char *_app2sd_find_associated_device(const char *mmc_app_path)
 		close(1);
 		close(2);
 		result = dup(my_pipe[1]);
+		if (result < 0) {
+			fprintf(stderr, "dup failed %d....%s\n", errno, strerror(errno));
+			_exit(-1);
+		}
 		result = dup(my_pipe[1]);
+		if (result < 0) {
+			fprintf(stderr, "dup failed %d....%s\n", errno, strerror(errno));
+			_exit(-1);
+		}
 		if (execvp(argv[0], (char *const *)argv) < 0) {
 			fprintf(stderr, "execvp failed\n");	/*Don't use d_msg_app2sd */
 		}
@@ -371,6 +399,8 @@ char *_app2sd_find_associated_device(const char *mmc_app_path)
 		/* parent */
 		close(my_pipe[1]);
 		result = read(my_pipe[0], buf, FILENAME_MAX);
+		if (result < 0)
+			fprintf(stderr, "read failed %d....%s\n", errno, strerror(errno));
 		break;
 	}
 
@@ -408,7 +438,15 @@ char *_app2sd_find_free_device(void)
 		close(1);
 		close(2);
 		result = dup(my_pipe[1]);
+		if (result < 0) {
+			fprintf(stderr, "dup failed %d....%s\n", errno, strerror(errno));
+			_exit(-1);
+		}
 		result = dup(my_pipe[1]);
+		if (result < 0) {
+			fprintf(stderr, "dup failed %d....%s\n", errno, strerror(errno));
+			_exit(-1);
+		}
 		if (execvp(argv[0], (char *const *)argv) < 0) {
 			fprintf(stderr, "execvp failed\n");	/*Don't use d_msg_app2sd */
 		}
@@ -417,6 +455,8 @@ char *_app2sd_find_free_device(void)
 		/* parent */
 		close(my_pipe[1]);
 		result = read(my_pipe[0], buf, FILENAME_MAX);
+		if (result < 0)
+			fprintf(stderr, "read failed %d....%s\n", errno, strerror(errno));
 		break;
 	}
 

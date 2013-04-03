@@ -152,47 +152,6 @@ int _app2sd_remove_password_from_db(const char *pkgid)
 }
 
 /*
- *@_app2sd_access_password_from_db
- *This function is to find out whther password exists for an application.
- * param[in]: pkgid: package id
- * return: On success, it will return zero , else value<0 if fail.
- */
-int _app2sd_access_password_from_db(const char *pkgid)
-{
-	char query[MAX_QUERY_LEN] = { 0 };
-	int access_flag = 0;
-	int i;
-	sqlite3_stmt *stmt = NULL;
-	const char *tail = NULL;
-
-	snprintf(query, MAX_QUERY_LEN,
-		 "select * from app2sd where pkgid LIKE '%s'", pkgid);
-	app2ext_print("\n access querys is %s ", query);
-
-	if (SQLITE_OK != sqlite3_prepare(app2sd_db, query,
-					 strlen(query), &stmt, &tail)) {
-		app2ext_print("sqlite3_prepare error\n");
-		return -1;
-	}
-	for (i = 0; SQLITE_ROW == sqlite3_step(stmt); i++) {
-		app2ext_print("\n entry available in sqlite");
-		access_flag = 1;
-
-	}
-	if (SQLITE_OK != sqlite3_finalize(stmt)) {
-		app2ext_print("error : sqlite3_finalize\n");
-		return -1;
-	}
-	if (access_flag == 1) {
-		app2ext_print("\n app2sd  value is accessible  ");
-		return APP2EXT_SUCCESS;
-	} else {
-		app2ext_print("\n app2sd  value is  not accessible  ");
-		return -1;
-	}
-}
-
-/*
  *@_app2sd_get_password_from_db
  *This function is to retrive password from DB
  * param[in]: pkgid: package id

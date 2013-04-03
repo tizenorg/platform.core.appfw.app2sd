@@ -519,7 +519,7 @@ int app2sd_pre_app_upgrade(const char *pkgid, GList* dir_list,
 	curr_size = _app2sd_calculate_file_size(app_path);
 	curr_size = (curr_size/1024)/1024;
 
-	if (curr_size<=0) {
+	if (curr_size==0) {
 		app2ext_print
 		    ("App2SD Error: App Entry is not present in SD Card\n");
 		return APP2EXT_ERROR_LOOPBACK_DEVICE_UNAVAILABLE;
@@ -630,6 +630,7 @@ int app2sd_post_app_upgrade(const char *pkgid,
 	return ret;
 }
 
+#if 0
 /**
  * Reserved API for forced cleanup
  *
@@ -701,6 +702,7 @@ int app2sd_force_cleanup(const char *pkgid){
 	}
 	return ret;
 }
+#endif
 
 /* This is the plug-in load function. The plugin has to bind its functions to function pointers of handle
 	@param[in/out]		st_interface 	Specifies the storage interface.

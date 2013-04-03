@@ -48,7 +48,8 @@ char *_app2sd_find_associated_device_node(const char *pkgid)
 	char delims[] = ":";
 	char *result = NULL;
 	char app_path[FILENAME_MAX] = { '\0' };
-
+	char dev[FILENAME_MAX] = {0,};
+	char *devnode = NULL;
 	snprintf(app_path, FILENAME_MAX, "%s%s", APP2SD_PATH,
 		 pkgid);
 	result = (char *)_app2sd_find_associated_device(app_path);
@@ -58,16 +59,20 @@ char *_app2sd_find_associated_device_node(const char *pkgid)
 		return NULL;
 	}
 	/*process the string*/
-	if (strstr(result, "/dev") == NULL) {
+	snprintf(dev, FILENAME_MAX-1, "%s", result);
+	if (strstr(dev, "/dev") == NULL) {
 		app2ext_print
 		    ("App2SD Error! Unable to find the associated File\n");
+
+		free(result);
 		return NULL;
 	} else {
-		ret_result = strtok(result, delims);
+		ret_result = strtok(dev, delims);
+		if (ret_result)
+			devnode = strdup(ret_result);
 	}
-
-	return ret_result;
-
+	free(result);
+	return devnode;
 }
 
 char *_app2sd_create_loopdevice_node(void)
@@ -101,7 +106,8 @@ char *_app2sd_create_loopdevice_node(void)
 		app2ext_print("Device node candidate is %s \n", dev_path);
 		dev_t dev_node;
 		dev_node = makedev(DEV_MAJOR, count);
-		if ((ret = mknod(dev_path, S_IFBLK | mode, dev_node)) < 0) {
+		ret = mknod(dev_path, S_IFBLK | mode, dev_node);
+		if (ret < 0) {
 			app2ext_print
 			    ("Error while creating the device node: errno is %d\n",
 			     errno);
@@ -1233,7 +1239,6 @@ int _app2sd_update_loopback_device_size(const char *pkgid,
 	int ret = 0;
 	char *device_node = NULL;
 	char *old_device_node = NULL;
-	char *result = NULL;
 	int err_res = 0;
 	char app_mmc_path[FILENAME_MAX] = { 0, };
 	char app_archive_path[FILENAME_MAX] = { 0, };
