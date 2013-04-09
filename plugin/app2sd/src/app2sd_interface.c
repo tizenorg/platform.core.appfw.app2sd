@@ -26,6 +26,7 @@
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <pkgmgr-info.h>
 
 int app2sd_pre_app_install(const char *pkgid, GList* dir_list,
 				int size)
@@ -201,6 +202,26 @@ int app2sd_post_app_install(const char *pkgid,
 			     buf_dir);
 		}
 
+	} else {
+		/*If  the status is success, then update installed storage to pkgmgr_parser db*/
+		int rt = 0;
+		pkgmgrinfo_pkgdbinfo_h handle = NULL;
+		rt = pkgmgrinfo_create_pkgdbinfo(pkgid, &handle);
+		if (rt < 0) {
+			app2ext_print("pkgmgrinfo_create_pkgdbinfo[%s] fail.. \n", pkgid);
+		}
+		rt = pkgmgrinfo_set_installed_storage_to_pkgdbinfo(handle, INSTALL_EXTERNAL);
+		if (rt < 0) {
+			app2ext_print("fail to update installed location to db[%s, %s]\n", pkgid, INSTALL_EXTERNAL);
+		}
+		rt =pkgmgrinfo_save_pkgdbinfo(handle);
+		if (rt < 0) {
+			app2ext_print("pkgmgrinfo_save_pkgdbinfo[%s] failed\n", pkgid);
+		}
+		rt =pkgmgrinfo_destroy_pkgdbinfo(handle);
+		if (rt < 0) {
+			app2ext_print("pkgmgrinfo_destroy_pkgdbinfo[%s] failed\n", pkgid);
+		}
 	}
 	return ret;
 }
@@ -479,6 +500,35 @@ int app2sd_move_installed_app(const char *pkgid, GList* dir_list,
 		app2ext_print("App2Sd Error : Unable to move application\n");
 		return ret;
 	}
+
+	/*If  move is completed, then update installed storage to pkgmgr_parser db*/
+	int rt = 0;
+	pkgmgrinfo_pkgdbinfo_h handle = NULL;
+	rt = pkgmgrinfo_create_pkgdbinfo(pkgid, &handle);
+	if (rt < 0) {
+		app2ext_print("App2Sd Error : pkgmgrinfo_create_pkgdbinfo[%s] fail.. \n", pkgid);
+	}
+
+	if (move_type == APP2EXT_MOVE_TO_EXT) {
+		rt = pkgmgrinfo_set_installed_storage_to_pkgdbinfo(handle, INSTALL_EXTERNAL);
+		if (rt < 0) {
+			app2ext_print("App2Sd Error : fail to update installed location to db[%s, %s]\n", pkgid, INSTALL_EXTERNAL);
+		}
+	} else {
+		rt = pkgmgrinfo_set_installed_storage_to_pkgdbinfo(handle, INSTALL_INTERNAL);
+		if (rt < 0) {
+			app2ext_print("App2Sd Error : fail to update installed location to db[%s, %s]\n", pkgid, INSTALL_INTERNAL);
+		}
+	}
+	rt =pkgmgrinfo_save_pkgdbinfo(handle);
+	if (rt < 0) {
+		app2ext_print("pkgmgrinfo_save_pkgdbinfo[%s] failed\n", pkgid);
+	}
+	rt =pkgmgrinfo_destroy_pkgdbinfo(handle);
+	if (rt < 0) {
+		app2ext_print("pkgmgrinfo_destroy_pkgdbinfo failed\n");
+	}
+
 	return ret;
 }
 

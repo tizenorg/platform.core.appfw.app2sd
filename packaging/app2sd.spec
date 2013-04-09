@@ -1,6 +1,6 @@
 Name:       app2sd
 Summary:    Application installation on external memory
-Version:    0.5.12
+Version:    0.5.13
 Release:    1
 Group:      Application Framework/Application Installer
 License:    Apache-2.0
@@ -11,6 +11,7 @@ BuildRequires:  pkgconfig(vconf)
 BuildRequires:  pkgconfig(dlog)
 BuildRequires:  pkgconfig(openssl)
 BuildRequires:  pkgconfig(db-util)
+BuildRequires:	  pkgconfig(pkgmgr-info)
 BuildRequires:  cmake
 
 %description
