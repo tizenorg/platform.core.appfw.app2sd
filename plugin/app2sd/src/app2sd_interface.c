@@ -538,7 +538,7 @@ int app2sd_move_installed_app(const char *pkgid, GList* dir_list,
 	}
 
 END:
-	snprintf(device_path, MAX_BUF_LEN, "%s/%s", APP2SD_TMP_PATH, pkgid);
+	snprintf(device_path, MAX_BUF_LEN, "%s/app2sd_%s", APP2SD_TMP_PATH, pkgid);
 
 	file = fopen(device_path, "w");
 	if (file == NULL) {
