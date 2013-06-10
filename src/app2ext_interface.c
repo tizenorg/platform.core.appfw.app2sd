@@ -122,10 +122,7 @@ int app2ext_get_app_location(const char *appname)
 
 	/*check whether application is in external memory or not */
 	fp = fopen(app_mmc_path, "r");
-	if (fp == NULL) {
-		app2ext_print
-		(" app path in external memory not accesible\n");
-	} else {
+	if (fp != NULL) {
 		fclose(fp);
 		fp = NULL;
 		return APP2EXT_SD_CARD;
@@ -134,8 +131,6 @@ int app2ext_get_app_location(const char *appname)
 	/*check whether application is in internal or not */
 	fp = fopen(app_dir_path, "r");
 	if (fp == NULL) {
-		app2ext_print
-		(" app path in internal memory not accesible\n");
 		return APP2EXT_NOT_INSTALLED;
 	} else {
 		fclose(fp);

@@ -1,6 +1,6 @@
 Name:       app2sd
 Summary:    Application installation on external memory
-Version:    0.5.15
+Version:    0.5.18
 Release:    1
 Group:      Application Framework/Application Installer
 License:    Apache-2.0
