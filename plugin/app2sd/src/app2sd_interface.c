@@ -27,6 +27,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <pkgmgr-info.h>
+#include <vconf.h>
 
 #define MAX_BUF_LEN	1024
 #define APP2SD_TMP_PATH "/opt/usr/apps/tmp"
@@ -489,10 +490,6 @@ int app2sd_move_installed_app(const char *pkgid, GList* dir_list,
 			app2ext_move_type move_type)
 {
 	int ret = 0;
-	char device_path[MAX_BUF_LEN] = {'\0', };
-	FILE* file = NULL;
-	int fd = 0;
-	char buf[MAX_BUF_LEN] = {'\0'};
 
 	/*Validate function arguments*/
 	if (pkgid == NULL || dir_list == NULL
@@ -538,22 +535,8 @@ int app2sd_move_installed_app(const char *pkgid, GList* dir_list,
 	}
 
 END:
-	snprintf(device_path, MAX_BUF_LEN, "%s/app2sd_%s", APP2SD_TMP_PATH, pkgid);
 
-	file = fopen(device_path, "w");
-	if (file == NULL) {
-		app2ext_print("fopen failed\n");
-	}
-
-	snprintf(buf, MAX_BUF_LEN - 1, "%d\n", ret);
-	fwrite(buf, 1, strlen(buf), file);
-
-	if (file != NULL) {
-		fflush(file);
-		fd = fileno(file);
-		fsync(fd);
-		fclose(file);
-	}
+	vconf_set_int(VCONFKEY_PKGMGR_STATUS, ret);
 
 	return ret;
 }
