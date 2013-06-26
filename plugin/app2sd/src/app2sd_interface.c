@@ -69,7 +69,15 @@ int app2sd_pre_app_install(const char *pkgid, GList* dir_list,
 	ret = _app2sd_create_loopback_device(pkgid, (size+PKG_BUF_SIZE));
 	if (ret) {
 		app2ext_print("App2Sd Error : Package already present\n");
-		return ret;
+		char buf_dir[FILENAME_MAX] = { 0, };
+		memset((void *)&buf_dir, '\0', FILENAME_MAX);
+		snprintf(buf_dir, FILENAME_MAX, "%s%s", APP_INSTALLATION_PATH, pkgid);
+		ret = _app2sd_delete_directory(buf_dir);
+		if (ret) {
+			app2ext_print
+				("App2Sd Error : Unable to delete the directory %s\n",
+				 buf_dir);
+		}
 	}
 	/*Perform Loopback encryption setup */
 	device_node = _app2sd_do_loopback_encryption_setup(pkgid);
@@ -354,14 +362,16 @@ int app2sd_pre_app_uninstall(const char *pkgid)
 	if (pkgid == NULL) {
 		app2ext_print
 		    ("App2Sd Error : Invalid function arguments to app launch setup\n");
-		return APP2EXT_ERROR_INVALID_ARGUMENTS;
+		ret = APP2EXT_ERROR_INVALID_ARGUMENTS;
+		goto END;
 	}
 	/*Check whether MMC is present or not */
 	ret = _app2sd_check_mmc_status();
 	if (ret) {
 		app2ext_print("App2Sd Error : MMC not preset OR Not ready %d\n",
 			     ret);
-		return APP2EXT_ERROR_MMC_STATUS;
+		ret = APP2EXT_ERROR_MMC_STATUS;
+		goto END;
 	}
 	/*check app entry is there in sd card or not. */
 	snprintf(app_path, FILENAME_MAX, "%s%s", APP2SD_PATH, pkgid);
@@ -369,7 +379,8 @@ int app2sd_pre_app_uninstall(const char *pkgid)
 	if (fp == NULL) {
 		app2ext_print
 		    ("App2SD Error: App Entry is not present in SD Card\n");
-		return APP2EXT_ERROR_INVALID_PACKAGE;
+		ret = APP2EXT_ERROR_INVALID_PACKAGE;
+		goto END;
 	}
 	fclose(fp);
 
@@ -382,7 +393,8 @@ int app2sd_pre_app_uninstall(const char *pkgid)
 		if (device_node == NULL) {
 			app2ext_print
 			    ("App2Sd Error : loopback encryption setup failed\n");
-			return APP2EXT_ERROR_DO_LOSETUP;
+			ret = APP2EXT_ERROR_DO_LOSETUP;
+			goto END;
 		}
 		/*Do  mounting */
 		ret =
@@ -396,7 +408,8 @@ int app2sd_pre_app_uninstall(const char *pkgid)
 				free(device_node);
 				device_node = NULL;
 			}
-			return APP2EXT_ERROR_MOUNT_PATH;
+			ret = APP2EXT_ERROR_MOUNT_PATH;
+			goto END;
 		}
 	} else {
 		/*Do  re-mounting */
@@ -411,14 +424,19 @@ int app2sd_pre_app_uninstall(const char *pkgid)
 				free(device_node);
 				device_node = NULL;
 			}
-			return APP2EXT_ERROR_MOUNT_PATH;
+			ret = APP2EXT_ERROR_MOUNT_PATH;
+			goto END;
 		}
 	}
 	if (device_node) {
 		free(device_node);
 		device_node = NULL;
 	}
-	return ret;
+
+END:
+	if (ret != APP2EXT_SUCCESS)
+		app2ext_print("App2Sd Error : app2sd has [%d]error, but return success for uninstallation\n", ret);
+	return APP2EXT_SUCCESS;
 }
 
 /*
@@ -435,34 +453,39 @@ int app2sd_post_app_uninstall(const char *pkgid)
 	if (pkgid == NULL) {
 		app2ext_print
 		    ("App2Sd Error : Invalid function arguments to Post Uninstall\n");
-		return APP2EXT_ERROR_INVALID_ARGUMENTS;
+		ret = APP2EXT_ERROR_INVALID_ARGUMENTS;
+		goto END;
 	}
 	/*Check whether MMC is present or not */
 	ret = _app2sd_check_mmc_status();
 	if (ret) {
 		app2ext_print("App2Sd Error : MMC not preset OR Not ready %d\n",
 			     ret);
-		return APP2EXT_ERROR_MMC_STATUS;
+		ret = APP2EXT_ERROR_MMC_STATUS;
+		goto END;
 	}
 	/*Unmount the loopback encrypted pseudo device from the application installation path */
 	ret = _app2sd_unmount_app_content(pkgid);
 	if (ret) {
 		app2ext_print("Unable to unmount the app content %d\n", ret);
-		return APP2EXT_ERROR_UNMOUNT;
+		ret = APP2EXT_ERROR_UNMOUNT;
+		goto END;
 	}
 	/*Detach the loopback encryption setup for the application */
 	ret = _app2sd_remove_loopback_encryption_setup(pkgid);
 	if (ret) {
 		app2ext_print
 		    ("Unable to Detach the loopback encryption setup for the application");
-		return APP2EXT_ERROR_DETACH_LOOPBACK_DEVICE;
+		ret = APP2EXT_ERROR_DETACH_LOOPBACK_DEVICE;
+		goto END;
 	}
 	/*Delete the loopback device from the SD card */
 	ret = _app2sd_delete_loopback_device(pkgid);
 	if (ret) {
 		app2ext_print
 		    ("App2Sd Error : Unable to delete the loopback device from the SD Card\n");
-		return APP2EXT_ERROR_DELETE_LOOPBACK_DEVICE;
+		ret =  APP2EXT_ERROR_DELETE_LOOPBACK_DEVICE;
+		goto END;
 	}
 	memset((void *)&buf_dir, '\0', FILENAME_MAX);
 	snprintf(buf_dir, FILENAME_MAX, "%s%s", APP_INSTALLATION_PATH, pkgid);
@@ -476,14 +499,20 @@ int app2sd_post_app_uninstall(const char *pkgid)
 	ret = _app2sd_initialize_db();
 	if (ret) {
 		app2ext_print("\n app2sd db initialize failed");
-		return APP2EXT_ERROR_SQLITE_REGISTRY;
+		ret = APP2EXT_ERROR_SQLITE_REGISTRY;
+		goto END;
 	}
 	ret = _app2sd_remove_password_from_db(pkgid);
 	if (ret) {
 		app2ext_print("cannot remove password from db \n");
-		return APP2EXT_ERROR_SQLITE_REGISTRY;
+		ret = APP2EXT_ERROR_SQLITE_REGISTRY;
+		goto END;
 	}
-	return ret;
+
+END:
+	if (ret != APP2EXT_SUCCESS)
+		app2ext_print("App2Sd Error : app2sd has [%d]error, but return success for uninstallation\n", ret);
+	return APP2EXT_SUCCESS;
 }
 
 int app2sd_move_installed_app(const char *pkgid, GList* dir_list,
