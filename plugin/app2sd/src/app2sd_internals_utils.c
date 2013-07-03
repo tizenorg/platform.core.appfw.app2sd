@@ -37,7 +37,7 @@
 #include <errno.h>
 
 #define	PASSWD_LEN		8
-#define	ASCII_PASSWD_CHAR	94
+#define	ASCII_PASSWD_CHAR	93
 
 /*
 ########### Internal APIs ##################
@@ -479,7 +479,7 @@ char *_app2sd_generate_password(const char *pkgid)
 {
 	char passwd[PASSWD_LEN+1] = { 0, };
 	char *ret_result = NULL;
-	char set[ASCII_PASSWD_CHAR+1] = "!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
+	char set[ASCII_PASSWD_CHAR+1] = "!\"#$%&()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
 	unsigned char char_1;
 	unsigned char char_2;
 	int i = 0;
