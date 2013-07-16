@@ -35,9 +35,11 @@
 #include <dlog.h>
 #include <sys/statvfs.h>
 #include <errno.h>
+#include <dlfcn.h>
 
 #define	PASSWD_LEN		8
 #define	ASCII_PASSWD_CHAR	93
+#define LIB_PRIVILEGE_CONTROL		"libprivilege-control.so.0"
 
 /*
 ########### Internal APIs ##################
@@ -508,3 +510,47 @@ char *_app2sd_generate_password(const char *pkgid)
 	memcpy(ret_result, passwd, PASSWD_LEN+1);
 	return ret_result;
 }
+
+/*@_app2sd_setup_path
+* change smack label given groupid
+* return: On success, it will return the password, else NULL.
+*/
+int _app2sd_setup_path(const char *pkgid, const char *dirpath,
+						int apppathtype, const char *groupid)
+{
+	int ret = 0;
+	void *handle = NULL;
+	char *errmsg = NULL;
+	int (*app_setup_path)(const char*, const char*, int, ...) = NULL;
+
+	if (pkgid == NULL || dirpath == NULL)
+		return -1;
+
+	handle = dlopen(LIB_PRIVILEGE_CONTROL, RTLD_LAZY | RTLD_GLOBAL);
+	if (!handle) {
+		app2ext_print( "setup path: dlopen() failed. [%s]", dlerror());
+		return -1;
+	}
+
+	app_setup_path = dlsym(handle, "app_setup_path");
+	errmsg = dlerror();
+	if ((errmsg != NULL) || (app_setup_path == NULL)) {
+		app2ext_print( "setup path: dlsym() failed. [%s]", errmsg);
+		dlclose(handle);
+		return -1;
+	}
+
+	if (groupid == NULL) {
+		app2ext_print( "[smack] app_setup_path(%s, %s, %d)", pkgid, dirpath, apppathtype);
+		ret = app_setup_path(pkgid, dirpath, apppathtype);
+		app2ext_print( "[smack] app_setup_path(), result = [%d]", ret);
+	} else {
+		app2ext_print( "[smack] app_setup_path(%s, %s, %d, %s)", pkgid, dirpath, apppathtype, groupid);
+		ret = app_setup_path(pkgid, dirpath, apppathtype, groupid);
+		app2ext_print( "[smack] app_setup_path(), result = [%d]", ret);
+	}
+
+	dlclose(handle);
+	return ret;
+}
+
