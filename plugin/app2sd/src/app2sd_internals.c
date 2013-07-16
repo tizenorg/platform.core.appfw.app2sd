@@ -41,6 +41,64 @@
 /*
 ########### Internal APIs ##################
  */
+enum path_type {
+	PATH_PRIVATE,
+	PATH_GROUP_RW,
+	PATH_PUBLIC_RO,
+	PATH_SETTINGS_RW,
+	PATH_ANY_LABEL
+};
+
+static int _app2sd_apply_app_smack(const char *pkgid, GList* dir_list, const char *groupid)
+{
+	int ret = APP2EXT_SUCCESS;
+	GList *list = NULL;
+	app2ext_dir_details* dir_detail = NULL;
+	char path[FILENAME_MAX] = { 0, };
+
+	list = g_list_first(dir_list);
+	while (list) {
+		dir_detail = (app2ext_dir_details *)list->data;
+		if (dir_detail && dir_detail->name
+			&& dir_detail->type == APP2EXT_DIR_RO) {
+			snprintf(path, FILENAME_MAX, "%s%s/%s",APP_INSTALLATION_PATH, pkgid, dir_detail->name);
+			ret = _app2sd_setup_path(pkgid, path, PATH_ANY_LABEL, groupid);
+			if (ret) {
+				app2ext_print ("App2Sd Error : unable to smack %s\n", path);
+				return APP2EXT_ERROR_MOVE;
+			}
+		}
+		list = g_list_next(list);
+	}
+
+	return APP2EXT_SUCCESS;
+}
+
+static int _app2sd_apply_mmc_smack(const char *pkgid, GList* dir_list, const char *groupid)
+{
+	int ret = APP2EXT_SUCCESS;
+	GList *list = NULL;
+	app2ext_dir_details* dir_detail = NULL;
+	char path[FILENAME_MAX] = { 0, };
+
+	list = g_list_first(dir_list);
+	while (list) {
+		dir_detail = (app2ext_dir_details *)list->data;
+		if (dir_detail && dir_detail->name
+			&& dir_detail->type == APP2EXT_DIR_RO) {
+			snprintf(path, FILENAME_MAX, "%s%s/.mmc/%s",APP_INSTALLATION_PATH, pkgid, dir_detail->name);
+
+			ret = _app2sd_setup_path(pkgid, path, PATH_ANY_LABEL, groupid);
+			if (ret) {
+				app2ext_print ("App2Sd Error : unable to smack %s\n", path);
+				return APP2EXT_ERROR_MOVE;
+			}
+		}
+		list = g_list_next(list);
+	}
+
+	return APP2EXT_SUCCESS;
+}
 
 char *_app2sd_find_associated_device_node(const char *pkgid)
 {
@@ -429,6 +487,12 @@ static int _app2sd_create_dir_with_link(const char *pkgid,
 			     errno);
 			return APP2EXT_ERROR_CREATE_SYMLINK;
 		}
+	}
+
+	ret = _app2sd_setup_path(pkgid, app_dir_path, PATH_ANY_LABEL, pkgid);
+	if (ret) {
+		app2ext_print ("App2Sd Error : unable to smack %s\n", app_dir_mmc_path);
+		return APP2EXT_ERROR_MOVE;
 	}
 
 	return ret;
@@ -834,6 +898,13 @@ int _app2sd_move_app_to_external(const char *pkgid, GList* dir_list)
 		     app_archive_path);
 		return APP2EXT_ERROR_DELETE_DIRECTORY;
 	}
+
+	ret = _app2sd_apply_mmc_smack(pkgid, dir_list, pkgid);
+	if (ret) {
+		app2ext_print("App2Sd Error : unable to apply app smack\n");
+		return APP2EXT_ERROR_MOVE;
+	}
+
 	/*Restore archive ends */
 	/*Re-mount the loopback encrypted pseudo device on application installation path as with Read Only permission */
 	ret = _app2sd_unmount_app_content(pkgid);
@@ -1064,6 +1135,13 @@ int _app2sd_move_app_to_internal(const char *pkgid, GList* dir_list)
 		     app_archive_path);
 		return APP2EXT_ERROR_DELETE_DIRECTORY;
 	}
+
+	ret = _app2sd_apply_app_smack(pkgid, dir_list, pkgid);
+	if (ret) {
+		app2ext_print("App2Sd Error : unable to apply app smack\n");
+		return APP2EXT_ERROR_MOVE;
+	}
+
 	return APP2EXT_SUCCESS;
 }
 
