@@ -1,11 +1,10 @@
-Name:           app2sd
-Version:        0.5.22
-Release:        1
-License:        Apache-2.0
-Summary:        Application installation on external memory
-Group:          Application Framework/Package Management
-Source0:        %{name}-%{version}.tar.gz
-Source1001:     app2sd.manifest
+Name:       app2sd
+Summary:    Application installation on external memory
+Version:    0.5.23
+Release:    1
+Group:      Application Framework/Application Installer
+License:    Apache-2.0
+Source0:    %{name}-%{version}.tar.gz
 
 BuildRequires:  cmake
 BuildRequires:  pkgconfig(db-util)
