@@ -1,26 +1,26 @@
-Name:       app2sd
-Summary:    Application installation on external memory
-Version:    0.5.22
-Release:    1
-Group:      Application Framework/Application Installer
-License:    Apache-2.0
-Source0:    %{name}-%{version}.tar.gz
-Source1001: app2sd.manifest
+Name:           app2sd
+Version:        0.5.22
+Release:        1
+License:        Apache-2.0
+Summary:        Application installation on external memory
+Group:          Application Framework/Package Management
+Source0:        %{name}-%{version}.tar.gz
+Source1001:     app2sd.manifest
 
-BuildRequires:  pkgconfig(libssl)
-BuildRequires:  pkgconfig(vconf)
-BuildRequires:  pkgconfig(dlog)
-BuildRequires:  pkgconfig(openssl)
-BuildRequires:  pkgconfig(db-util)
-BuildRequires:  pkgconfig(pkgmgr-info)
 BuildRequires:  cmake
+BuildRequires:  pkgconfig(db-util)
+BuildRequires:  pkgconfig(dlog)
+BuildRequires:  pkgconfig(libssl)
+BuildRequires:  pkgconfig(openssl)
+BuildRequires:  pkgconfig(pkgmgr-info)
+BuildRequires:  pkgconfig(vconf)
 
 %description
 Tizen application installation on external memory
 
 %package devel
-Summary:    Application install on external memory (devel)
-Requires:   app2sd = %{version}-%{release}
+Summary:        Application install on external memory (devel)
+Requires:       app2sd = %{version}-%{release}
 
 %description devel
 Tizen application installation on external memory (devel)
@@ -31,8 +31,7 @@ cp %{SOURCE1001} .
 
 %build
 %cmake .
-
-make %{?jobs:-j%jobs}
+make %{?_smp_mflags}
 
 %install
 %make_install

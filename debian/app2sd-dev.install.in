@@ -1,2 +1,0 @@
-@PREFIX@/include/app2sd_interface.h
-@PREFIX@/lib/pkgconfig/*.pc
