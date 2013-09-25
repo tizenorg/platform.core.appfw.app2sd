@@ -1,0 +1,7 @@
+Code-Review+2: Patrick McCarty <patrick.mccarty@linux.intel.com>
+Verified+1: Anas Nashif <anas.nashif@intel.com>
+Submitted-by: Anas Nashif <anas.nashif@intel.com>
+Submitted-at: Wed, 25 Sep 2013 12:45:13 -0700
+Reviewed-on: https://review.tizen.org/gerrit/10245
+Project: platform/core/appfw/app2sd
+Branch: refs/heads/tizen
