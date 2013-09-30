@@ -36,6 +36,9 @@ make %{?_smp_mflags}
 %install
 %make_install
 
+mkdir -p %{buildroot}/usr/share/license
+cp LICENSE %{buildroot}/usr/share/license/%{name}
+
 %post -p /sbin/ldconfig
 
 %postun -p /sbin/ldconfig
@@ -44,8 +47,8 @@ make %{?_smp_mflags}
 %manifest %{name}.manifest
 %defattr(-,root,root,-)
 %{_libdir}/libapp2ext.so.*
-%{_libdir}/libapp2sd.so.*
-
+%{_libdir}/libapp2sd.so*
+/usr/share/license/%{name}
 
 %files devel
 %manifest %{name}.manifest
