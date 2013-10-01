@@ -705,11 +705,18 @@ int _app2sd_move_app_to_external(const char *pkgid, GList* dir_list)
 	/*check whether application is in external memory or not */
 	fp = fopen(mmc_path, "r+");
 	if (fp != NULL) {
+		const char *argv[] = { "/bin/rm", "-rf", mmc_path, NULL };
 		app2ext_print
-		    ("Already %s entry is present in the SD Card\n",
+		    ("Already %s entry is present in the SD Card, delete entry and go on without return\n",
 		     pkgid);
 		fclose(fp);
-		return APP2EXT_ERROR_ALREADY_FILE_PRESENT;
+//		return APP2EXT_ERROR_ALREADY_FILE_PRESENT;
+		ret = _xsystem(argv);
+		if (ret) {
+			app2ext_print
+				("delete fail[%s]\n",
+				mmc_path);
+		}
 	}
 
 	snprintf(app_mmc_path, FILENAME_MAX,
