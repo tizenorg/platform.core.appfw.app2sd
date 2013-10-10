@@ -705,18 +705,11 @@ int _app2sd_move_app_to_external(const char *pkgid, GList* dir_list)
 	/*check whether application is in external memory or not */
 	fp = fopen(mmc_path, "r+");
 	if (fp != NULL) {
-		const char *argv[] = { "/bin/rm", "-rf", mmc_path, NULL };
 		app2ext_print
 		    ("Already %s entry is present in the SD Card, delete entry and go on without return\n",
 		     pkgid);
 		fclose(fp);
 //		return APP2EXT_ERROR_ALREADY_FILE_PRESENT;
-		ret = _xsystem(argv);
-		if (ret) {
-			app2ext_print
-				("delete fail[%s]\n",
-				mmc_path);
-		}
 	}
 
 	snprintf(app_mmc_path, FILENAME_MAX,
@@ -730,7 +723,7 @@ int _app2sd_move_app_to_external(const char *pkgid, GList* dir_list)
 			app2ext_print
 			    ("App2sd Error: Unable to create directory for archiving, error no is %d\n",
 			     errno);
-			return APP2EXT_ERROR_CREATE_DIRECTORY;
+//			return APP2EXT_ERROR_CREATE_DIRECTORY;
 		}
 	}
 
@@ -777,7 +770,7 @@ int _app2sd_move_app_to_external(const char *pkgid, GList* dir_list)
 	if (ret) {
 		app2ext_print
 		    ("App2Sd Error : loopback node creation failed\n");
-		return APP2EXT_ERROR_CREATE_DEVICE;
+//		return APP2EXT_ERROR_CREATE_DEVICE;
 	}
 	/*Perform Loopback encryption setup */
 	device_node =
@@ -829,8 +822,7 @@ int _app2sd_move_app_to_external(const char *pkgid, GList* dir_list)
 					    ("App2Sd Error : unable to copy from %s to %s \n",
 					     path,
 					     app_archive_path);
-					return
-					    APP2EXT_ERROR_MOVE;
+//					return APP2EXT_ERROR_MOVE;
 				}
 			}
 		}
@@ -874,8 +866,7 @@ int _app2sd_move_app_to_external(const char *pkgid, GList* dir_list)
 					     app_mmc_path,
 					     strerror
 					     (errno));
-					return
-					    APP2EXT_ERROR_MOVE;
+//					return APP2EXT_ERROR_MOVE;
 				}
 			}
 			ret =
@@ -903,7 +894,7 @@ int _app2sd_move_app_to_external(const char *pkgid, GList* dir_list)
 		app2ext_print
 		    ("App2Sd Error : unable to delete %s \n",
 		     app_archive_path);
-		return APP2EXT_ERROR_DELETE_DIRECTORY;
+//		return APP2EXT_ERROR_DELETE_DIRECTORY;
 	}
 
 	ret = _app2sd_apply_mmc_smack(pkgid, dir_list, pkgid);
@@ -1017,7 +1008,7 @@ int _app2sd_move_app_to_internal(const char *pkgid, GList* dir_list)
 		app2ext_print
 		    ("App2Sd Error : unable to create directory%s\n",
 		     app_archive_path);
-		return APP2EXT_ERROR_CREATE_DIRECTORY;
+//		return APP2EXT_ERROR_CREATE_DIRECTORY;
 	}
 
 
@@ -1049,8 +1040,7 @@ int _app2sd_move_app_to_internal(const char *pkgid, GList* dir_list)
 						     app_archive_path,
 						     strerror
 						     (errno));
-						return
-						    APP2EXT_ERROR_MOVE;
+//						return APP2EXT_ERROR_MOVE;
 					}
 				}
 
@@ -1069,10 +1059,9 @@ int _app2sd_move_app_to_internal(const char *pkgid, GList* dir_list)
 						     path);
 					} else {
 						app2ext_print
-						    ("App2Sd Error : unable to remove the symbolic link file %s\n",
+						    ("App2Sd Error : unable to remove the symbolic link file %s, it is already unlinked!!!\n",
 						     path);
-						return
-						    APP2EXT_ERROR_DELETE_LINK_FILE;
+//						return APP2EXT_ERROR_DELETE_LINK_FILE;
 					}
 				}
 
@@ -1098,8 +1087,7 @@ int _app2sd_move_app_to_internal(const char *pkgid, GList* dir_list)
 						     app_path,
 						     strerror
 						     (errno));
-						return
-						    APP2EXT_ERROR_MOVE;
+//						return APP2EXT_ERROR_MOVE;
 					}
 				}
 		}
@@ -1133,14 +1121,14 @@ int _app2sd_move_app_to_internal(const char *pkgid, GList* dir_list)
 		app2ext_print
 		    ("App2Sd Error : unable to delete %s \n",
 		     app_mmc_path);
-		return APP2EXT_ERROR_DELETE_DIRECTORY;
+//		return APP2EXT_ERROR_DELETE_DIRECTORY;
 	}
 	ret = _app2sd_delete_directory(app_archive_path);
 	if (ret) {
 		app2ext_print
 		    ("App2Sd Error : unable to delete %s \n",
 		     app_archive_path);
-		return APP2EXT_ERROR_DELETE_DIRECTORY;
+//		return APP2EXT_ERROR_DELETE_DIRECTORY;
 	}
 
 	ret = _app2sd_apply_app_smack(pkgid, dir_list, pkgid);

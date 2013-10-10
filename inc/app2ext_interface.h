@@ -432,6 +432,40 @@ if (ret < 0) {
  */
 API int app2ext_disable_external_pkg(const char *pkgid);
 
+/**
+ * @brief : This API enable the directory which has package that is located in external memory
+ * @return	error < 0  if pkg enable fail ,
+ @code
+ #include <app2ext_interface.h>
+int ret = -1;
+
+ret = app2ext_enable_external_dir();
+if (ret < 0) {
+	printf("\n app2sd dir is not enabled ");
+} else {
+	printf("\n app2sd dir is enabled ");
+}
+ @endcode
+ */
+API int app2ext_enable_external_dir(void);
+
+/**
+ * @brief : This API disable the directory which has package that is located in external memory
+ * @return	error < 0  if pkg enable fail ,
+ @code
+ #include <app2ext_interface.h>
+int ret = -1;
+
+ret = app2ext_enable_external_dir();
+if (ret < 0) {
+	printf("\n app2sd dir is not enabled ");
+} else {
+	printf("\n app2sd dir is enabled ");
+}
+ @endcode
+ */
+API int app2ext_disable_external_dir(void);
+
 #ifdef __cplusplus
 }
 #endif
