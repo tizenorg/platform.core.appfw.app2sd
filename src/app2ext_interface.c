@@ -27,6 +27,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <dirent.h>
 
 #define APP2EXT_SD_PLUGIN_PATH	LIBPREFIX "/libapp2sd.so"
 
@@ -203,5 +204,53 @@ int app2ext_disable_external_pkg(const char *pkgid)
 		app2_handle->interface.disable(pkgid);
 		app2ext_deinit(app2_handle);
 	}
+	return 0;
+}
+
+int app2ext_enable_external_dir(void)
+{
+	int ret = 0;
+	DIR *dir = NULL;
+	char buf[FILENAME_MAX] = { 0, };
+	struct dirent entry, *result;
+
+	dir = opendir(APP2SD_PATH);
+	if (!dir) {
+		if (strerror_r(errno, buf, sizeof(buf)) == 0)
+			app2ext_print("App2Ext Error :Failed to access the because %s", buf);
+		return -1;
+	}
+
+	for (ret = readdir_r(dir, &entry, &result); ret == 0 && result != NULL; ret = readdir_r(dir, &entry, &result)) {
+		ret = app2ext_enable_external_pkg(entry.d_name);
+		if (ret != 0)
+			app2ext_print("App2Ext Error : fail enable pkg[%s]\n", entry.d_name);
+	}
+
+	closedir(dir);
+	return 0;
+}
+
+int app2ext_disable_external_dir(void)
+{
+	int ret = 0;
+	DIR *dir = NULL;
+	char buf[FILENAME_MAX] = { 0, };
+	struct dirent entry, *result;
+
+	dir = opendir(APP2SD_PATH);
+	if (!dir) {
+		if (strerror_r(errno, buf, sizeof(buf)) == 0)
+			app2ext_print("App2Ext Error :Failed to access the because %s", buf);
+		return -1;
+	}
+
+	for (ret = readdir_r(dir, &entry, &result); ret == 0 && result != NULL; ret = readdir_r(dir, &entry, &result)) {
+		ret = app2ext_disable_external_pkg(entry.d_name);
+		if (ret != 0)
+			app2ext_print("App2Ext Error : fail disable pkg[%s]\n", entry.d_name);
+	}
+
+	closedir(dir);
 	return 0;
 }

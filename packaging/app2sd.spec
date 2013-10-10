@@ -1,6 +1,6 @@
 Name:       app2sd
 Summary:    Application installation on external memory
-Version:    0.5.23
+Version:    0.5.24
 Release:    1
 Group:      Application Framework/Application Installer
 License:    Apache-2.0
@@ -45,6 +45,7 @@ make %{?_smp_mflags}
 %defattr(-,root,root,-)
 %{_libdir}/libapp2ext.so.*
 %{_libdir}/libapp2sd.so*
+
 
 %files devel
 %manifest %{name}.manifest
