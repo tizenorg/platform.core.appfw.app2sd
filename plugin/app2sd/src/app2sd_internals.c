@@ -564,6 +564,11 @@ int _app2sd_mount_app_content(const char *pkgid, const char *dev,
 		}
 	}
 
+	ret = _app2sd_setup_path(pkgid, app_dir_mmc_path, PATH_ANY_LABEL, pkgid);
+	if (ret) {
+		app2ext_print ("App2Sd Error : unable to smack %s\n", app_dir_mmc_path);
+	}
+
 	switch (mount_type) {
 	case MOUNT_TYPE_RD:
 		{
