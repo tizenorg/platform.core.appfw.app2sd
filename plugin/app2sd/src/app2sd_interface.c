@@ -549,7 +549,7 @@ int app2sd_move_installed_app(const char *pkgid, GList* dir_list,
 			pkgmgrinfo_pkginfo_destroy_pkginfo(info_handle);
 			goto END;
 	} else {
-		app2ext_print("App2Sd Error : okokkokin [%d]STORAGE\n", storage);
+		app2ext_print("App2Sd info : STORAGE Move[%d] is success\n", storage);
 	}
 	pkgmgrinfo_pkginfo_destroy_pkginfo(info_handle);
 
