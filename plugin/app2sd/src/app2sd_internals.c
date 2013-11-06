@@ -1355,7 +1355,7 @@ int _app2sd_update_loopback_device_size(const char *pkgid,
 		if (ret) {
 			app2ext_print("App2Sd Error : Re-mount failed\n");
 			err_res = APP2EXT_ERROR_MOUNT_PATH;
-			goto FINISH_OFF;
+//			goto FINISH_OFF;
 		}
 	} else {
 		/*Do  re-mounting */
@@ -1366,7 +1366,7 @@ int _app2sd_update_loopback_device_size(const char *pkgid,
 		if (ret) {
 			app2ext_print("App2Sd Error : Re-mount failed\n");
 			err_res = APP2EXT_ERROR_MOUNT_PATH;
-			goto FINISH_OFF;
+//			goto FINISH_OFF;
 		}
 	}
 
@@ -1379,7 +1379,7 @@ int _app2sd_update_loopback_device_size(const char *pkgid,
 	if (ret) {
 		app2ext_print("App2Sd Error : copy ro content  failed\n");
 		err_res = ret;
-		goto FINISH_OFF;
+//		goto FINISH_OFF;
 	}
 
 	ret = _app2sd_unmount_app_content(pkgid);
@@ -1387,13 +1387,13 @@ int _app2sd_update_loopback_device_size(const char *pkgid,
 		app2ext_print
 		    ("App2SD Error: Unable to unmount the SD application\n");
 		err_res = APP2EXT_ERROR_UNMOUNT;
-		goto FINISH_OFF;
+//		goto FINISH_OFF;
 	}
 	ret = _app2sd_remove_loopback_encryption_setup(pkgid);
 	if (ret) {
 		app2ext_print("App2SD Error: Unable to remove loopback setup\n");
 		err_res = APP2EXT_ERROR_DELETE_LOOPBACK_DEVICE;
-		goto FINISH_OFF;
+//		goto FINISH_OFF;
 	}
 	ret = _app2sd_unmount_app_content(temp_pkgid);
 	if (ret) {
