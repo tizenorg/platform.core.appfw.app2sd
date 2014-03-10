@@ -1,10 +1,10 @@
-Name:           app2sd
-Version:        0.5.22
-Release:        1
-License:        Apache-2.0
-Summary:        Application installation on external memory
-Group:          Application Framework/Package Management
-Source0:        %{name}-%{version}.tar.gz
+Name:       app2sd
+Summary:    Application installation on external memory
+Version:    0.5.27
+Release:    1
+Group:      Application Framework/Application Installer
+License:    Apache-2.0
+Source0:    %{name}-%{version}.tar.gz
 Source1001:     app2sd.manifest
 
 BuildRequires:  cmake
@@ -36,6 +36,9 @@ make %{?_smp_mflags}
 %install
 %make_install
 
+mkdir -p %{buildroot}/usr/share/license
+cp LICENSE %{buildroot}/usr/share/license/%{name}
+
 %post -p /sbin/ldconfig
 
 %postun -p /sbin/ldconfig
@@ -44,8 +47,8 @@ make %{?_smp_mflags}
 %manifest %{name}.manifest
 %defattr(-,root,root,-)
 %{_libdir}/libapp2ext.so.*
-%{_libdir}/libapp2sd.so.*
-
+%{_libdir}/libapp2sd.so*
+/usr/share/license/%{name}
 
 %files devel
 %manifest %{name}.manifest
