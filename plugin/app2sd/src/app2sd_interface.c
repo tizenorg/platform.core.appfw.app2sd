@@ -519,6 +519,7 @@ int app2sd_move_installed_app(const char *pkgid, GList* dir_list,
 			app2ext_move_type move_type)
 {
 	int ret = 0;
+	int pkgmgrinfo_ret = 0;
 
 	/*Validate function arguments*/
 	if (pkgid == NULL || dir_list == NULL
@@ -529,6 +530,29 @@ int app2sd_move_installed_app(const char *pkgid, GList* dir_list,
 		goto END;
 	}
 
+	/*If  move is completed, then update installed storage to pkgmgr_parser db*/
+	pkgmgrinfo_pkginfo_h info_handle = NULL;
+	pkgmgrinfo_installed_storage storage = PMINFO_INTERNAL_STORAGE;
+	pkgmgrinfo_ret = pkgmgrinfo_pkginfo_get_pkginfo(pkgid, &info_handle);
+	if (pkgmgrinfo_ret < 0) {
+		app2ext_print("App2Sd Error : pkgmgrinfo_pkginfo_get_pkginfo[%s] fail.. \n", pkgid);
+	}
+	pkgmgrinfo_ret = pkgmgrinfo_pkginfo_get_installed_storage(info_handle, &storage);
+	if (pkgmgrinfo_ret < 0) {
+		app2ext_print("App2Sd Error : pkgmgrinfo_pkginfo_get_installed_storage[%s] fail.. \n", pkgid);
+	}
+
+	if ((move_type == APP2EXT_MOVE_TO_EXT && storage == PMINFO_EXTERNAL_STORAGE)
+		|| (move_type == APP2EXT_MOVE_TO_PHONE && storage == PMINFO_INTERNAL_STORAGE)) {
+			ret = APP2EXT_ERROR_PKG_EXISTS;
+			app2ext_print("App2Sd Error : PKG_EXISTS in [%d]STORAGE\n", storage);
+			pkgmgrinfo_pkginfo_destroy_pkginfo(info_handle);
+			goto END;
+	} else {
+		app2ext_print("App2Sd info : STORAGE Move[%d] is success\n", storage);
+	}
+	pkgmgrinfo_pkginfo_destroy_pkginfo(info_handle);
+
 	ret = _app2sd_move_app(pkgid, move_type, dir_list);
 	if (ret) {
 		app2ext_print("App2Sd Error : Unable to move application\n");
@@ -536,30 +560,29 @@ int app2sd_move_installed_app(const char *pkgid, GList* dir_list,
 	}
 
 	/*If  move is completed, then update installed storage to pkgmgr_parser db*/
-	int rt = 0;
 	pkgmgrinfo_pkgdbinfo_h handle = NULL;
-	rt = pkgmgrinfo_create_pkgdbinfo(pkgid, &handle);
-	if (rt < 0) {
+	pkgmgrinfo_ret = pkgmgrinfo_create_pkgdbinfo(pkgid, &handle);
+	if (pkgmgrinfo_ret < 0) {
 		app2ext_print("App2Sd Error : pkgmgrinfo_create_pkgdbinfo[%s] fail.. \n", pkgid);
 	}
 
 	if (move_type == APP2EXT_MOVE_TO_EXT) {
-		rt = pkgmgrinfo_set_installed_storage_to_pkgdbinfo(handle, INSTALL_EXTERNAL);
-		if (rt < 0) {
+		pkgmgrinfo_ret = pkgmgrinfo_set_installed_storage_to_pkgdbinfo(handle, INSTALL_EXTERNAL);
+		if (pkgmgrinfo_ret < 0) {
 			app2ext_print("App2Sd Error : fail to update installed location to db[%s, %s]\n", pkgid, INSTALL_EXTERNAL);
 		}
 	} else {
-		rt = pkgmgrinfo_set_installed_storage_to_pkgdbinfo(handle, INSTALL_INTERNAL);
-		if (rt < 0) {
+		pkgmgrinfo_ret = pkgmgrinfo_set_installed_storage_to_pkgdbinfo(handle, INSTALL_INTERNAL);
+		if (pkgmgrinfo_ret < 0) {
 			app2ext_print("App2Sd Error : fail to update installed location to db[%s, %s]\n", pkgid, INSTALL_INTERNAL);
 		}
 	}
-	rt =pkgmgrinfo_save_pkgdbinfo(handle);
-	if (rt < 0) {
+	pkgmgrinfo_ret =pkgmgrinfo_save_pkgdbinfo(handle);
+	if (pkgmgrinfo_ret < 0) {
 		app2ext_print("pkgmgrinfo_save_pkgdbinfo[%s] failed\n", pkgid);
 	}
-	rt =pkgmgrinfo_destroy_pkgdbinfo(handle);
-	if (rt < 0) {
+	pkgmgrinfo_ret =pkgmgrinfo_destroy_pkgdbinfo(handle);
+	if (pkgmgrinfo_ret < 0) {
 		app2ext_print("pkgmgrinfo_destroy_pkgdbinfo failed\n");
 	}
 
