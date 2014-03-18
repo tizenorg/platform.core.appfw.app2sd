@@ -58,7 +58,7 @@ extern "C" {
 	 *		It should be called before actual installation is done.
 	 * @pre			vfat type sd card must be present.
 	 * @post		Installation is done by package installer.
-	 		Encryption password is saved in db /opt/dbspace/.app2sd.db
+	 		Encryption password is saved in db TZ_SYS_DB/.app2sd.db
 	 * @param[in] appname		application package name
          *				[Ex: com.samsung.calculator]
 	 *This entry is parsed from application package control/manifest file.

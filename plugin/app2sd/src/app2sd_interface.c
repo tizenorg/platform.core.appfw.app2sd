@@ -29,8 +29,11 @@
 #include <pkgmgr-info.h>
 #include <vconf.h>
 
+/* For multi-user support */
+#include <tzplatform_config.h>
+
 #define MAX_BUF_LEN	1024
-#define APP2SD_TMP_PATH "/opt/usr/apps/tmp"
+#define APP2SD_TMP_PATH tzplatform_mkpath(TZ_USER_APP, "tmp")
 
 int app2sd_pre_app_install(const char *pkgid, GList* dir_list,
 				int size)
