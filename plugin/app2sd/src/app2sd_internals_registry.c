@@ -34,6 +34,10 @@
 #include <dlog.h>
 #include <time.h>
 #include <db-util.h>
+
+/* For multi-user support */
+#include <tzplatform_config.h>
+
 #define MAX_QUERY_LEN 4096
 #define PASSWORD_LENGTH 64
 /*
@@ -41,7 +45,7 @@
  */
 
 /*sqlite  db code*/
-#define APP2SD_DB_FILE "/opt/dbspace/.app2sd.db"
+#define APP2SD_DB_FILE tzplatform_mkpath(TZ_SYS_DB, ".app2sd.db")
 sqlite3 *app2sd_db;
 #define QUERY_CREATE_TABLE_APP2SD "create table app2sd \
 	(pkgid text primary key,\

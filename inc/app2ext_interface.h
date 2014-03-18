@@ -51,6 +51,10 @@ extern "C" {
 
 #include <dlog/dlog.h>
 #include <glib.h>
+
+/* For multi-user support */
+#include <tzplatform_config.h>
+
 #ifdef LOG_TAG
 #undef LOG_TAG
 #endif
@@ -66,7 +70,7 @@ extern "C" {
 #define APP2EXT_SUCCESS 0
 #define MMC_PATH "/opt/storage/sdcard"
 #define APP2SD_PATH MMC_PATH"/app2sd/"
-#define APP_INSTALLATION_PATH "/opt/usr/apps/"
+#define APP_INSTALLATION_PATH tzplatform_mkpath(TZ_USER_APP, "")
 
 /**
  * Enum for application installation location
