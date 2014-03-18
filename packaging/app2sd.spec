@@ -1,6 +1,6 @@
 Name:           app2sd
 Version:        0.5.22
-Release:        1
+Release:        0
 License:        Apache-2.0
 Summary:        Application installation on external memory
 Group:          Application Framework/Package Management
@@ -14,6 +14,7 @@ BuildRequires:  pkgconfig(libssl)
 BuildRequires:  pkgconfig(openssl)
 BuildRequires:  pkgconfig(pkgmgr-info)
 BuildRequires:  pkgconfig(vconf)
+BuildRequires:  pkgconfig(libtzplatform-config)
 
 %description
 Tizen application installation on external memory
