@@ -521,7 +521,7 @@ int _app2sd_setup_path(const char *pkgid, const char *dirpath,
 	int ret = 0;
 	void *handle = NULL;
 	char *errmsg = NULL;
-	int (*app_setup_path)(const char*, const char*, int, ...) = NULL;
+	int (*perm_app_setup_path)(const char*, const char*, int, ...) = NULL;
 
 	if (pkgid == NULL || dirpath == NULL)
 		return -1;
@@ -532,22 +532,22 @@ int _app2sd_setup_path(const char *pkgid, const char *dirpath,
 		return -1;
 	}
 
-	app_setup_path = dlsym(handle, "app_setup_path");
+	perm_app_setup_path = dlsym(handle, "perm_app_setup_path");
 	errmsg = dlerror();
-	if ((errmsg != NULL) || (app_setup_path == NULL)) {
+	if ((errmsg != NULL) || (perm_app_setup_path == NULL)) {
 		app2ext_print( "setup path: dlsym() failed. [%s]", errmsg);
 		dlclose(handle);
 		return -1;
 	}
 
 	if (groupid == NULL) {
-		app2ext_print( "[smack] app_setup_path(%s, %s, %d)", pkgid, dirpath, apppathtype);
-		ret = app_setup_path(pkgid, dirpath, apppathtype);
-		app2ext_print( "[smack] app_setup_path(), result = [%d]", ret);
+		app2ext_print( "[smack] perm_app_setup_path(%s, %s, %d)", pkgid, dirpath, apppathtype);
+		ret = perm_app_setup_path(pkgid, dirpath, apppathtype);
+		app2ext_print( "[smack] perm_app_setup_path(), result = [%d]", ret);
 	} else {
-		app2ext_print( "[smack] app_setup_path(%s, %s, %d, %s)", pkgid, dirpath, apppathtype, groupid);
-		ret = app_setup_path(pkgid, dirpath, apppathtype, groupid);
-		app2ext_print( "[smack] app_setup_path(), result = [%d]", ret);
+		app2ext_print( "[smack] perm_app_setup_path(%s, %s, %d, %s)", pkgid, dirpath, apppathtype, groupid);
+		ret = perm_app_setup_path(pkgid, dirpath, apppathtype, groupid);
+		app2ext_print( "[smack] perm_app_setup_path(), result = [%d]", ret);
 	}
 
 	dlclose(handle);
