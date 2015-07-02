@@ -591,7 +591,7 @@ int app2sd_move_installed_app(const char *pkgid, GList* dir_list,
 
 END:
 
-	vconf_set_int(VCONFKEY_PKGMGR_STATUS, ret);
+	_app2sd_make_result_info_file((char*)pkgid, ret);
 
 	return ret;
 }

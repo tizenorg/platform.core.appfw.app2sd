@@ -1451,3 +1451,46 @@ FINISH_OFF:
 	}
 	return err_res;
 }
+
+void _app2sd_make_result_info_file(char *pkgid, int size)
+{
+	int ret = 0;
+	FILE* file = NULL;
+	int fd = 0;
+	char buf[FILENAME_MAX] = {0};
+	const char* app_info_label = "*";
+	char info_file[FILENAME_MAX] = {'\0', };
+
+	if(pkgid == NULL)
+		return;
+
+	snprintf(info_file, FILENAME_MAX, "/tmp/%s", pkgid);
+	app2ext_print("App2SD info : File path = %s\n", info_file);
+
+	file = fopen(info_file, "w");
+	if (file == NULL) {
+		app2ext_print("App2SD Error: Couldn't open the file %s \n", info_file);
+		return;
+	}
+
+	snprintf(buf, 128, "%d\n", size);
+	fwrite(buf, 1, strlen(buf), file);
+
+	fflush(file);
+	fd = fileno(file);
+	fsync(fd);
+	fclose(file);
+
+	if(lsetxattr(info_file, "security.SMACK64", app_info_label, strlen(app_info_label), 0)) {
+		app2ext_print("App2SD Error: error(%d) in setting smack label",errno);
+	}
+	ret = chmod(info_file, 0777);
+	if (ret == -1) {
+		return;
+	}
+
+	ret = chown(info_file, 5000, 5000);
+	if (ret == -1) {
+		return;
+	}
+}
