@@ -149,6 +149,7 @@ int _app2sd_delete_directory(char *dirname)
 
 			if (lstat(abs_filename, &stFileInfo) < 0) {
 				perror(abs_filename);
+				closedir(dp);
 				return -1;
 			}
 
