@@ -157,13 +157,17 @@ int _app2sd_delete_directory(char *dirname)
 				if (strcmp(ep->d_name, ".")
 				    && strcmp(ep->d_name, "..")) {
 					ret = _app2sd_delete_directory(abs_filename);
-					if (ret <0)
+					if (ret < 0) {
+						closedir(dp);
 						return -1;
+					}
 				}
 			} else {
 				ret = remove(abs_filename);
-				if (ret <0)
+				if (ret < 0) {
+					closedir(dp);
 					return -1;
+				}
 			}
 		}
 		(void)closedir(dp);
