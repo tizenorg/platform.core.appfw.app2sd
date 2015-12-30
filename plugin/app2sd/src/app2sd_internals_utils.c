@@ -157,18 +157,22 @@ int _app2sd_delete_directory(char *dirname)
 				if (strcmp(ep->d_name, ".")
 				    && strcmp(ep->d_name, "..")) {
 					ret = _app2sd_delete_directory(abs_filename);
-					if (ret <0)
+					if (ret < 0) {
+						closedir(dp);
 						return -1;
+					}
 				}
 			} else {
 				ret = remove(abs_filename);
-				if (ret <0)
+				if (ret < 0) {
+					closedir(dp);
 					return -1;
+				}
 			}
 		}
 		(void)closedir(dp);
 		ret = remove(dirname);
-		if (ret <0)
+		if (ret < 0)
 			return -1;
 	} else {
 		app2ext_print("Couldn't open the directory[%s]\n", dirname);
