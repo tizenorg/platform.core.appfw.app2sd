@@ -68,8 +68,8 @@ extern "C" {
 #endif
 
 #define APP2EXT_SUCCESS 0
-#define MMC_PATH "/opt/storage/sdcard"
-#define APP2SD_PATH MMC_PATH"/app2sd/"
+#define MMC_PATH tzplatform_mkpath(TZ_SYS_MEDIA, "sdcard")
+#define APP2SD_PATH tzplatform_mkpath(TZ_SYS_MEDIA, "sdcard/app2sd/")
 #define APP_INSTALLATION_PATH tzplatform_mkpath(TZ_USER_APP, "")
 
 /**
