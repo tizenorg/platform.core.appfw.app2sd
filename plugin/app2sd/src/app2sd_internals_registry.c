@@ -111,18 +111,19 @@ int _app2sd_initialize_db()
 int _app2sd_set_password_in_db(const char *pkgid,
 				      const char *passwd)
 {
-	char query[MAX_QUERY_LEN] = { 0, };
 	char *error_message = NULL;
 
-	sqlite3_snprintf(MAX_QUERY_LEN, query, "insert into app2sd(pkgid,password)\
-			values ('%s','%s')", pkgid, passwd);
+	char *query = sqlite3_mprintf("insert into app2sd(pkgid,password) values (%Q, %Q)", pkgid, passwd);
 
 	if (SQLITE_OK != sqlite3_exec(app2sd_db, query, NULL, NULL,
 				      &error_message)) {
 		app2ext_print("Don't execute query = %s, error message = %s\n",
 			     query, error_message);
+
+		sqlite3_free(query);
 		return APP2EXT_ERROR_SQLITE_REGISTRY;
 	}
+	sqlite3_free(query);
 	app2ext_print("\n sqlite insertion done ");
 	return APP2EXT_SUCCESS;
 }
@@ -136,20 +137,20 @@ int _app2sd_set_password_in_db(const char *pkgid,
  */
 int _app2sd_remove_password_from_db(const char *pkgid)
 {
-	char query[MAX_QUERY_LEN] = { 0 };
 	char *error_message = NULL;
 
-	sqlite3_snprintf(MAX_QUERY_LEN, query,
-		 "delete from app2sd where pkgid LIKE '%s'", pkgid);
+	char *query = sqlite3_mprintf("delete from app2sd where pkgid LIKE %Q", pkgid);
 	app2ext_print("\n deletion querys is %s ", query);
 
 	if (SQLITE_OK != sqlite3_exec(app2sd_db, query, NULL,
 				      NULL, &error_message)) {
 		app2ext_print("Don't execute query = %s, error message = %s\n",
 			     query, error_message);
+		sqlite3_free(query);
 		return APP2EXT_ERROR_SQLITE_REGISTRY;
 	}
 
+	sqlite3_free(query);
 	app2ext_print("\n app2sd password deletion done ");
 	return APP2EXT_SUCCESS;
 

@@ -68,9 +68,12 @@ extern "C" {
 #endif
 
 #define APP2EXT_SUCCESS 0
-#define MMC_PATH tzplatform_mkpath(TZ_SYS_STORAGE, "sdcard")
-#define APP2SD_PATH tzplatform_mkpath(TZ_SYS_STORAGE, "sdcard/app2sd/")
-#define APP_INSTALLATION_PATH tzplatform_mkpath(TZ_USER_APP, "")
+#define MMC_PATH tzplatform_mkpath(TZ_SYS_MEDIA, "sdcard")
+#define APP2SD_PATH tzplatform_mkpath(TZ_SYS_MEDIA, "sdcard/app2sd/")
+/* user app */
+#define APP_INSTALLATION_USER_PATH tzplatform_mkpath(TZ_USER_APP, "/")
+/* gloabl app */
+#define APP_INSTALLATION_PATH tzplatform_mkpath(TZ_SYS_RW_APP, "/")
 
 /**
  * Enum for application installation location
@@ -277,6 +280,15 @@ typedef int (*app2ext_enable)(const char *appname);
 typedef int (*app2ext_disable)(const char *appname);
 
 /**
+ * @brief :This function type is for a function that is implemented by plugin
+ * and called after application uninstallation.
+ *
+ * @param[in] 	pkgid		application package name which is to be uninstalled
+ * @return 	0 if success,  error code(>0) if fail
+ */
+typedef int (*app2ext_force_clean)(const char *pkgid);
+
+/**
  * This structure defines the app2ext interfaces. Plugins have to implement these functions
  */
 typedef struct app2ext_interface_t{
@@ -287,6 +299,7 @@ typedef struct app2ext_interface_t{
 	app2ext_pre_uninstall		pre_uninstall;
 	app2ext_post_uninstall		post_uninstall;
 	app2ext_move			move;
+	app2ext_force_clean		force_clean;
 	app2ext_enable			enable;
 	app2ext_disable			disable;
 } app2ext_interface;
@@ -469,6 +482,23 @@ if (ret < 0) {
  @endcode
  */
 API int app2ext_disable_external_dir(void);
+
+/**
+ * @brief : This API clean the directory and symbolic link which are made by app2ext
+ * @return	error < 0  if pkg enable fail ,
+ @code
+ #include <app2ext_interface.h>
+int ret = -1;
+
+ret = app2ext_force_clean_pkg("docomo6002");
+if (ret < 0) {
+	printf("\n force_clean fail  ");
+} else {
+	printf("\n force_clean success");
+}
+ @endcode
+ */
+API int app2ext_force_clean_pkg(const char *pkgid);
 
 #ifdef __cplusplus
 }
