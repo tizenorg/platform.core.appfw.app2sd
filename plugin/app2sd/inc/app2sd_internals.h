@@ -28,8 +28,8 @@
 #define _GNU_SOURCE
 #endif
 
-#ifndef _BSD_SOURCE
-#define _BSD_SOURCE
+#ifndef _DEFAULT_SOURCE
+#define _DEFAULT_SOURCE
 #endif
 
 /*Include Headers*/
@@ -47,6 +47,7 @@
 #include <errno.h>
 #include <sys/mount.h>
 #include <app2sd_interface.h>
+#include <math.h>
 
 #define DIR_PERMS (S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH)
 
@@ -58,6 +59,7 @@
 #define DEV_MAJOR		7
 
 #define FS_TYPE		"ext4"
+#define INTERNAL_STORAGE_PATH "/opt/usr"
 
 typedef enum mount_type_t {
 	MOUNT_TYPE_RD = 0,
@@ -103,6 +105,9 @@ int _app2sd_move_app(const char *pkgid, app2ext_move_type move_cmd, GList* dir_l
 
 /*utility to delete the directory*/
 int _app2sd_delete_directory(char *dirname);
+
+/*utility to delete symbolic link*/
+void _app2sd_delete_symlink(const char *dirname);
 
 /*utility to calculate the size of a directory in MB*/
 unsigned long long _app2sd_calculate_dir_size(char *dirname);
@@ -153,6 +158,9 @@ int _app2sd_unmount_app_content(const char *pkgid);
 /*This function removes the loopbck encryption setup for the app*/
 int _app2sd_remove_loopback_encryption_setup(const char *pkgid);
 
+/*This function removes all of loopbck encryption setup for the app*/
+int _app2sd_remove_all_loopback_encryption_setups(const char *pkgid);
+
 /*This function updates loopback device size*/
 int _app2sd_update_loopback_device_size(const char *pkgid,
 	int size, GList* dir_list);
@@ -180,8 +188,7 @@ int _app2sd_remove_password_from_db(const char *pkgid);
 int _app2sd_set_password_in_db(const char *pkgid,
 				      const char *passwd);
 
-/* This functions setup path for smack */
-int _app2sd_setup_path(const char *pkgid, const char *dirpath,
-						int apppathtype, const char *groupid);
+/* This functions make result file */
+void _app2sd_make_result_info_file(char *pkgid, int size);
 
 #endif

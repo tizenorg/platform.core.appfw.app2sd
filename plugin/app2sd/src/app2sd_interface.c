@@ -29,11 +29,7 @@
 #include <pkgmgr-info.h>
 #include <vconf.h>
 
-/* For multi-user support */
-#include <tzplatform_config.h>
-
 #define MAX_BUF_LEN	1024
-#define APP2SD_TMP_PATH tzplatform_mkpath(TZ_USER_APP, "tmp")
 
 int app2sd_pre_app_install(const char *pkgid, GList* dir_list,
 				int size)
@@ -43,33 +39,42 @@ int app2sd_pre_app_install(const char *pkgid, GList* dir_list,
 	char *device_node = NULL;
 	char *devi = NULL;
 	char *result = NULL;
+	int reqd_disk_size = size + ceil(size*0.2);
 
-	/*Validate the function parameter recieved */
+	/* debug path */
+	app2ext_print("MMC_PATH = (%s)\n", MMC_PATH);
+	app2ext_print("APP2SD_PATH = (%s)\n", APP2SD_PATH);
+	app2ext_print("APP_INSTALLATION_PATH = (%s)\n", APP_INSTALLATION_PATH);
+	app2ext_print("APP_INSTALLATION_USER_PATH = (%s)\n", APP_INSTALLATION_USER_PATH);
+
+	/* Validate the function parameter recieved */
 	if (pkgid == NULL || dir_list == NULL || size <= 0) {
 		app2ext_print("App2Sd Error : Invalid function arguments\n");
 		return APP2EXT_ERROR_INVALID_ARGUMENTS;
 	}
-	/*Check whether MMC is present or not */
+	/* Check whether MMC is present or not */
 	ret = _app2sd_check_mmc_status();
 	if (ret) {
 		app2ext_print("App2Sd Error : MMC not preset OR Not ready %d\n",
 			ret);
 		return APP2EXT_ERROR_MMC_STATUS;
 	}
-	/*Find available free memory in the MMC card */
+	/* Find available free memory in the MMC card */
 	ret = _app2sd_get_available_free_memory(MMC_PATH,
 						&free_mmc_mem);
 	if (ret) {
 		app2ext_print("App2Sd Error : Unable to get available free memory in MMC %d\n", ret);
 		return APP2EXT_ERROR_MMC_STATUS;
 	}
-	/*If avaialalbe free memory in MMC is less than required size + 5MB , return error */
-	if ((size + PKG_BUF_SIZE + MEM_BUF_SIZE) > free_mmc_mem) {
+	app2ext_print("Size details for application installation:size=%dMB, reqd_disk_size=%dMB, free_mmc_size=%dMB\n",
+			 size, reqd_disk_size, free_mmc_mem);
+	/* If avaialalbe free memory in MMC is less than required size + 5MB , return error */
+	if ((reqd_disk_size + PKG_BUF_SIZE + MEM_BUF_SIZE) > free_mmc_mem) {
 		app2ext_print("Insufficient memory in MMC for application installation %d\n", ret);
 		return APP2EXT_ERROR_MMC_INSUFFICIENT_MEMORY;
 	}
-	/*Create a loopback device */
-	ret = _app2sd_create_loopback_device(pkgid, (size+PKG_BUF_SIZE));
+	/* Create a loopback device */
+	ret = _app2sd_create_loopback_device(pkgid, (reqd_disk_size+PKG_BUF_SIZE));
 	if (ret) {
 		app2ext_print("App2Sd Error : Package already present\n");
 		char buf_dir[FILENAME_MAX] = { 0, };
@@ -82,14 +87,14 @@ int app2sd_pre_app_install(const char *pkgid, GList* dir_list,
 				 buf_dir);
 		}
 	}
-	/*Perform Loopback encryption setup */
+	/* Perform Loopback encryption setup */
 	device_node = _app2sd_do_loopback_encryption_setup(pkgid);
 	if (!device_node) {
 		app2ext_print("App2Sd Error : Loopback encryption setup failed\n");
 		_app2sd_delete_loopback_device(pkgid);
 		return APP2EXT_ERROR_DO_LOSETUP;
 	}
-	/*Check whether loopback device is associated with device node or not */
+	/* Check whether loopback device is associated with device node or not */
 	devi = _app2sd_find_associated_device_node(pkgid);
 	if (devi == NULL) {
 		app2ext_print("App2Sd Error : finding associated device node failed\n");
@@ -97,7 +102,7 @@ int app2sd_pre_app_install(const char *pkgid, GList* dir_list,
 		goto FINISH_OFF;
 	}
 
-	/*Format the loopback file system */
+	/* Format the loopback file system */
 	ret = _app2sd_create_file_system(device_node);
 	if (ret) {
 		app2ext_print("App2Sd Error : creating FS failed failed\n");
@@ -105,7 +110,7 @@ int app2sd_pre_app_install(const char *pkgid, GList* dir_list,
 		goto FINISH_OFF;
 	}
 
-	/*Mount the loopback encrypted pseudo device on application installation path as with Read Write permission */
+	/* Mount the loopback encrypted pseudo device on application installation path as with Read Write permission */
 	ret =_app2sd_mount_app_content(pkgid, device_node, MOUNT_TYPE_RW,
 					dir_list, APP2SD_PRE_INSTALL);
 	if (ret) {
@@ -114,7 +119,7 @@ int app2sd_pre_app_install(const char *pkgid, GList* dir_list,
 		goto FINISH_OFF;
 	}
 
-	/*Success */
+	/* Success */
 	ret = APP2EXT_SUCCESS;
 	goto END;
 
@@ -426,7 +431,7 @@ int app2sd_pre_app_uninstall(const char *pkgid)
 END:
 	if (ret != APP2EXT_SUCCESS)
 		app2ext_print("App2Sd Error : app2sd has [%d]error, but return success for uninstallation\n", ret);
-	return APP2EXT_SUCCESS;
+	return ret;
 }
 
 /*
@@ -502,7 +507,7 @@ int app2sd_post_app_uninstall(const char *pkgid)
 END:
 	if (ret != APP2EXT_SUCCESS)
 		app2ext_print("App2Sd Error : app2sd has [%d]error, but return success for uninstallation\n", ret);
-	return APP2EXT_SUCCESS;
+	return ret;
 }
 
 int app2sd_move_installed_app(const char *pkgid, GList* dir_list,
@@ -539,7 +544,7 @@ int app2sd_move_installed_app(const char *pkgid, GList* dir_list,
 			pkgmgrinfo_pkginfo_destroy_pkginfo(info_handle);
 			goto END;
 	} else {
-		app2ext_print("App2Sd info : STORAGE Move[%d] is success\n", storage);
+		app2ext_print("App2Sd info : pkgid[%s] move to STORAGE[%d]\n", pkgid, storage);
 	}
 	pkgmgrinfo_pkginfo_destroy_pkginfo(info_handle);
 
@@ -549,7 +554,7 @@ int app2sd_move_installed_app(const char *pkgid, GList* dir_list,
 		goto END;
 	}
 
-	/*If move is completed, then update installed storage to pkgmgr_parser db*/
+	/* If move is completed, then update installed storage to pkgmgr_parser db */
 	if (move_type == APP2EXT_MOVE_TO_EXT) {
 		pkgmgrinfo_ret = pkgmgrinfo_pkginfo_set_installed_storage(pkgid, INSTALL_EXTERNAL);
 		if (pkgmgrinfo_ret < 0) {
@@ -576,6 +581,7 @@ int app2sd_pre_app_upgrade(const char *pkgid, GList* dir_list,
 	char *device_node = NULL;
 	unsigned long long curr_size = 0;
 	FILE *fp = NULL;
+	int reqd_disk_size = size + ceil(size*0.2);
 
 	/*Validate function arguments*/
 	if (pkgid == NULL || dir_list == NULL || size<=0) {
@@ -603,15 +609,15 @@ int app2sd_pre_app_upgrade(const char *pkgid, GList* dir_list,
 	fclose(fp);
 	/*Get installed app size*/
 	curr_size = _app2sd_calculate_file_size(app_path);
-	curr_size = (curr_size/1024)/1024;
+	curr_size = (curr_size)/(1024 * 1024);
 
 	if (curr_size==0) {
 		app2ext_print
 		    ("App2SD Error: App Entry is not present in SD Card\n");
 		return APP2EXT_ERROR_LOOPBACK_DEVICE_UNAVAILABLE;
 	}
-	if (curr_size<size) {
-		ret = _app2sd_update_loopback_device_size(pkgid, size, dir_list);
+	if ((int)curr_size < reqd_disk_size) {
+		ret = _app2sd_update_loopback_device_size(pkgid, reqd_disk_size, dir_list);
 		if(APP2EXT_SUCCESS !=ret) {
 			app2ext_print
 			    ("App2SD Error: _app2sd_update_loopback_device_size() failed\n");
@@ -632,7 +638,7 @@ int app2sd_pre_app_upgrade(const char *pkgid, GList* dir_list,
 		/*Do  mounting */
 		ret =
 		    _app2sd_mount_app_content(pkgid, device_node,
-					MOUNT_TYPE_RW, NULL,
+					MOUNT_TYPE_RW, dir_list,
 					APP2SD_PRE_UPGRADE);
 		if (ret) {
 			app2ext_print("App2Sd Error : Re-mount failed\n");
@@ -790,6 +796,57 @@ int app2sd_force_cleanup(const char *pkgid){
 }
 #endif
 
+int app2sd_force_clean(const char *pkgid)
+{
+	char buf_dir[FILENAME_MAX] = { 0, };
+	int ret = APP2EXT_SUCCESS;
+
+	/*Validate the function parameter recieved */
+	if (pkgid == NULL) {
+		app2ext_print("Invalid func parameters\n");
+		return APP2EXT_ERROR_INVALID_ARGUMENTS;
+	}
+	app2ext_print("star force_clean [%s]", pkgid);
+
+	sync();	//2
+	/*Unmount the loopback encrypted pseudo device from the application installation path */
+	ret = _app2sd_unmount_app_content(pkgid);
+	if (ret) {
+		app2ext_print("Unable to unmount the app content %d\n", ret);
+	}
+
+	/*Detach the loopback encryption setup for the application */
+	ret = _app2sd_remove_all_loopback_encryption_setups(pkgid);
+	if (ret) {
+		app2ext_print("Unable to Detach the loopback encryption setup for the application");
+	}
+
+	/*Delete the loopback device from the SD card */
+	ret = _app2sd_delete_loopback_device(pkgid);
+	if (ret) {
+		app2ext_print("Unable to Detach the loopback encryption setup for the application");
+	}
+
+	/*Delete symlink*/
+	memset((void *)&buf_dir, '\0', FILENAME_MAX);
+	snprintf(buf_dir, FILENAME_MAX, "%s%s", APP_INSTALLATION_PATH, pkgid);
+
+	_app2sd_delete_symlink(buf_dir);
+
+	/*remove passwrd from DB*/
+	ret = _app2sd_initialize_db();
+	if (ret) {
+		app2ext_print("\n app2sd db initialize failed");
+	}
+	ret = _app2sd_remove_password_from_db(pkgid);
+	if (ret) {
+		app2ext_print("cannot remove password from db \n");
+	}
+
+	app2ext_print("finish force_clean");
+	return 0;
+}
+
 /* This is the plug-in load function. The plugin has to bind its functions to function pointers of handle
 	@param[in/out]		st_interface 	Specifies the storage interface.
 */
@@ -804,6 +861,7 @@ app2ext_on_load(app2ext_interface *st_interface)
 	st_interface->pre_upgrade= app2sd_pre_app_upgrade;
 	st_interface->post_upgrade= app2sd_post_app_upgrade;
 	st_interface->move= app2sd_move_installed_app;
+	st_interface->force_clean= app2sd_force_clean;
 	st_interface->enable= app2sd_on_demand_setup_init;
 	st_interface->disable= app2sd_on_demand_setup_exit;
 }

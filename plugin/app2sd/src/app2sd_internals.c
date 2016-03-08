@@ -24,10 +24,12 @@
 #include <app2sd_internals.h>
 #include <app2sd_interface.h>
 
+#include <sys/xattr.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <string.h>
 #include <dirent.h>
 #include <sys/stat.h>
 #include <stdio.h>
@@ -37,19 +39,31 @@
 #include <fcntl.h>
 #include <time.h>
 #include <dlog.h>
+#include <privilege-control.h>
+#include <sys/statvfs.h>
+
+extern int app2sd_force_clean(const char *pkgid);
 
 /*
 ########### Internal APIs ##################
  */
-enum path_type {
-	PATH_PRIVATE,
-	PATH_GROUP_RW,
-	PATH_PUBLIC_RO,
-	PATH_SETTINGS_RW,
-	PATH_NPRUNTIME,
-	PATH_ANY_LABEL
-};
+static int _app2sd_setup_path(const char *pkgid, const char *dirpath,
+		int apppathtype, const char *groupid)
+{
+	int ret = 0;
 
+	if (groupid == NULL) {
+		ret = perm_app_setup_path(pkgid, dirpath, apppathtype);
+		app2ext_print( "[smack] app_setup_path(), result = [%d]", ret);
+	} else {
+		ret = perm_app_setup_path(pkgid, dirpath, apppathtype, groupid);
+		app2ext_print( "[smack] app_setup_path(), result = [%d]", ret);
+	}
+
+	return ret;
+}
+
+/*
 static int _app2sd_apply_app_smack(const char *pkgid, GList* dir_list, const char *groupid)
 {
 	int ret = APP2EXT_SUCCESS;
@@ -63,7 +77,7 @@ static int _app2sd_apply_app_smack(const char *pkgid, GList* dir_list, const cha
 		if (dir_detail && dir_detail->name
 			&& dir_detail->type == APP2EXT_DIR_RO) {
 			snprintf(path, FILENAME_MAX, "%s%s/%s",APP_INSTALLATION_PATH, pkgid, dir_detail->name);
-			ret = _app2sd_setup_path(pkgid, path, PATH_ANY_LABEL, groupid);
+			ret = _app2sd_setup_path(pkgid, path, PERM_APP_PATH_ANY_LABEL, groupid);
 			if (ret) {
 				app2ext_print ("App2Sd Error : unable to smack %s\n", path);
 				return APP2EXT_ERROR_MOVE;
@@ -74,7 +88,9 @@ static int _app2sd_apply_app_smack(const char *pkgid, GList* dir_list, const cha
 
 	return APP2EXT_SUCCESS;
 }
+*/
 
+/*
 static int _app2sd_apply_mmc_smack(const char *pkgid, GList* dir_list, const char *groupid)
 {
 	int ret = APP2EXT_SUCCESS;
@@ -89,7 +105,7 @@ static int _app2sd_apply_mmc_smack(const char *pkgid, GList* dir_list, const cha
 			&& dir_detail->type == APP2EXT_DIR_RO) {
 			snprintf(path, FILENAME_MAX, "%s%s/.mmc/%s",APP_INSTALLATION_PATH, pkgid, dir_detail->name);
 
-			ret = _app2sd_setup_path(pkgid, path, PATH_ANY_LABEL, groupid);
+			ret = _app2sd_setup_path(pkgid, path, PERM_APP_PATH_ANY_LABEL, groupid);
 			if (ret) {
 				app2ext_print ("App2Sd Error : unable to smack %s\n", path);
 				return APP2EXT_ERROR_MOVE;
@@ -100,6 +116,7 @@ static int _app2sd_apply_mmc_smack(const char *pkgid, GList* dir_list, const cha
 
 	return APP2EXT_SUCCESS;
 }
+*/
 
 char *_app2sd_find_associated_device_node(const char *pkgid)
 {
@@ -111,22 +128,23 @@ char *_app2sd_find_associated_device_node(const char *pkgid)
 	char *devnode = NULL;
 	snprintf(app_path, FILENAME_MAX, "%s%s", APP2SD_PATH,
 		 pkgid);
+	app2ext_print("sdcard app_path = (%s)\n", app_path);
 	result = (char *)_app2sd_find_associated_device(app_path);
 	if (result == NULL) {
-		app2ext_print
-		    ("App2SD Error! Unable to find the associated File\n");
+		app2ext_print("App2SD info! there is no the associated File with [%s]\n", pkgid);
 		return NULL;
 	}
-	/*process the string*/
+	/* process the string*/
+	app2ext_print("result = (%s)\n", result);
 	snprintf(dev, FILENAME_MAX-1, "%s", result);
 	if (strstr(dev, "/dev") == NULL) {
-		app2ext_print
-		    ("App2SD Error! Unable to find the associated File\n");
+		app2ext_print("App2SD Error! Unable to find the associated File\n");
 
 		free(result);
 		return NULL;
 	} else {
-		ret_result = strtok(dev, delims);
+		char *saveptr = NULL;
+		ret_result = strtok_r(dev, delims, &saveptr);
 		if (ret_result)
 			devnode = strdup(ret_result);
 	}
@@ -144,7 +162,7 @@ char *_app2sd_create_loopdevice_node(void)
 	FILE *fp = NULL;
 
 	result = (char *)_app2sd_find_free_device();
-	/*validate the result */
+	/* validate the result */
 	if (result == NULL || strstr(result, "/dev") == NULL) {
 		app2ext_print("No device found, creating device node...\n");
 
@@ -237,7 +255,7 @@ char *_app2sd_do_loopback_encryption_setup(const char *pkgid)
 		}
 	}
 
-	/*Get Free device node*/
+	/* Get Free device node*/
 	device_node = _app2sd_create_loopdevice_node();
 	if (NULL == device_node) {
 		free(passwd);
@@ -300,7 +318,7 @@ char *_app2sd_do_loopback_duplicate_encryption_setup(const char *pkgid, const ch
 		}
 
 	}
-	/*Get Free device node*/
+	/* Get Free device node*/
 	device_node = _app2sd_create_loopdevice_node();
 	if (NULL == device_node) {
 		free(passwd);
@@ -354,6 +372,37 @@ int _app2sd_remove_loopback_encryption_setup(const char *pkgid)
 	if (dev_node) {
 		free(dev_node);
 		dev_node = NULL;
+	}
+	return ret;
+}
+
+int _app2sd_remove_all_loopback_encryption_setups(const char *pkgid)
+{
+	int ret = APP2EXT_SUCCESS;
+	char *result = NULL;
+	char *dev_node = NULL;
+	while(1) {
+		if ((dev_node = _app2sd_find_associated_device_node(pkgid)) == NULL) {
+			app2ext_print("finish to find the association\n");
+			ret = APP2EXT_SUCCESS;
+			break;
+		}
+
+		app2ext_print("find node ::  %s \n", dev_node);
+
+		result = (char *)_app2sd_detach_loop_device(dev_node);
+		if (result == NULL) {
+			app2ext_print("App2sd Error: Error in detaching\n");
+			ret = APP2EXT_ERROR_DETACH_LOOPBACK_DEVICE;
+			break;
+		} else {
+			free(result);
+			result = NULL;
+		}
+		if (dev_node) {
+			free(dev_node);
+			dev_node = NULL;
+		}
 	}
 	return ret;
 }
@@ -429,27 +478,31 @@ int _app2sd_create_file_system(const char *device_path)
 {
 	int ret = APP2EXT_SUCCESS;
 	FILE *fp = NULL;
-	if (NULL == device_path) {
+	char err_buf[1024] = {0,};
+
+	if (device_path == NULL) {
 		app2ext_print("App2Sd Error: invalid param [NULL]\n");
 		return APP2EXT_ERROR_INVALID_ARGUMENTS;
 	}
 
-	/*Format the filesystem [create a filesystem]*/
+	/* Format the filesystem [create a filesystem]*/
 	const char *argv[] = { "/sbin/mkfs.ext4", device_path, NULL };
 	fp = fopen(device_path, "r+");
 	if (fp == NULL) {
+		strerror_r(errno, err_buf, sizeof(err_buf));
 		app2ext_print
 		    ("App2sd Error: Unable to access %s [System errono is %d.....%s]\n",
-		     device_path, errno, strerror(errno));
+		     device_path, errno, err_buf);
 		return APP2EXT_ERROR_ACCESS_FILE;
 	} else {
 		fclose(fp);
 	}
 	ret = _xsystem(argv);
 	if (ret) {
+		strerror_r(errno, err_buf, sizeof(err_buf));
 		app2ext_print
 		    ("App2Sd Error : creating file system failed [System error is %s\n",
-		     strerror(errno));
+		     err_buf);
 		return APP2EXT_ERROR_CREATE_FS;
 	}
 	return ret;
@@ -490,11 +543,20 @@ static int _app2sd_create_dir_with_link(const char *pkgid,
 		}
 	}
 
-	ret = _app2sd_setup_path(pkgid, app_dir_path, PATH_ANY_LABEL, pkgid);
+	/* TODO */
+	/*
+	ret = _app2sd_setup_path(pkgid, app_dir_path, PERM_APP_PATH_ANY_LABEL, pkgid);
+	if (ret) {
+		app2ext_print ("App2Sd Error : unable to smack %s\n", app_dir_path);
+		return APP2EXT_ERROR_MOVE;
+	}
+
+	ret = _app2sd_setup_path(pkgid, app_dir_mmc_path, PERM_APP_PATH_ANY_LABEL, pkgid);
 	if (ret) {
 		app2ext_print ("App2Sd Error : unable to smack %s\n", app_dir_mmc_path);
 		return APP2EXT_ERROR_MOVE;
 	}
+	*/
 
 	return ret;
 }
@@ -538,6 +600,11 @@ int _app2sd_mount_app_content(const char *pkgid, const char *dev,
 	mode_t mode = DIR_PERMS;
 	char app_dir_path[FILENAME_MAX] = { 0, };
 	char app_dir_mmc_path[FILENAME_MAX] = { 0, };
+	struct timespec time = {
+		.tv_sec = 0,
+		.tv_nsec = 1000 * 1000 * 200
+	};
+
 	if (NULL == pkgid || NULL == dev) {
 		app2ext_print("App2Sd Error : Input param is NULL %s %s \n",
 			     pkgid, dev);
@@ -564,7 +631,7 @@ int _app2sd_mount_app_content(const char *pkgid, const char *dev,
 		}
 	}
 
-	usleep(200 * 1000);	/* 200ms sleep*/
+	nanosleep(&time, NULL); /* 200ms sleep */
 	app2ext_print ("App2Sd info : give a delay for mount\n");
 
 	switch (mount_type) {
@@ -572,7 +639,7 @@ int _app2sd_mount_app_content(const char *pkgid, const char *dev,
 		{
 			if ((ret =
 			     mount(dev, app_dir_mmc_path, FS_TYPE,
-				   MS_MGC_VAL | MS_RDONLY, NULL)) < 0) {
+				   MS_MGC_VAL | MS_RDONLY | MS_NOSUID, NULL)) < 0) {
 				app2ext_print
 				    ("App2Sd Error : Read Only Mount failed [System Erro no is %d], dev is %s path is %s\n",
 				     errno, dev, app_dir_mmc_path);
@@ -583,7 +650,7 @@ int _app2sd_mount_app_content(const char *pkgid, const char *dev,
 	case MOUNT_TYPE_RW:
 		{
 			if ((ret =
-			     mount(dev, app_dir_mmc_path, FS_TYPE, MS_MGC_VAL,
+			     mount(dev, app_dir_mmc_path, FS_TYPE, MS_MGC_VAL | MS_NOSUID,
 				   NULL)) < 0) {
 				app2ext_print
 				    ("App2Sd Error : Read Write Mount failed [System Erro no is %d]\n",
@@ -596,7 +663,7 @@ int _app2sd_mount_app_content(const char *pkgid, const char *dev,
 		{
 			if ((ret =
 			     mount(dev, app_dir_mmc_path, FS_TYPE,
-				   MS_MGC_VAL | MS_NOEXEC, NULL)) < 0) {
+				   MS_MGC_VAL | MS_NOEXEC | MS_NOSUID, NULL)) < 0) {
 				app2ext_print
 				    ("App2Sd Error : RWX Mount failed [System Erro no is %d]\n",
 				     errno);
@@ -608,7 +675,7 @@ int _app2sd_mount_app_content(const char *pkgid, const char *dev,
 		{
 			if ((ret =
 			     mount(dev, app_dir_mmc_path, FS_TYPE,
-				   MS_MGC_VAL | MS_RDONLY | MS_REMOUNT,
+				   MS_MGC_VAL | MS_RDONLY | MS_REMOUNT | MS_NOSUID,
 				   NULL)) < 0) {
 				app2ext_print
 				    ("App2Sd Error : RWX Mount failed [System Erro no is %d]\n",
@@ -621,7 +688,7 @@ int _app2sd_mount_app_content(const char *pkgid, const char *dev,
 		{
 			if ((ret =
 			     mount(dev, app_dir_mmc_path, FS_TYPE,
-				   MS_MGC_VAL | MS_REMOUNT, NULL)) < 0) {
+				   MS_MGC_VAL | MS_REMOUNT | MS_NOSUID, NULL)) < 0) {
 				app2ext_print
 				    ("App2Sd Error : RWX Mount failed [System Erro no is %d]\n",
 				     errno);
@@ -636,7 +703,7 @@ int _app2sd_mount_app_content(const char *pkgid, const char *dev,
 			break;
 		}
 	}
-	if (cmd == APP2SD_PRE_INSTALL || cmd == APP2SD_MOVE_APP_TO_MMC) {
+	if (cmd == APP2SD_PRE_INSTALL || cmd == APP2SD_MOVE_APP_TO_MMC || cmd == APP2SD_PRE_UPGRADE) {
 		ret = _app2sd_create_directory_entry(pkgid, dir_list);
 	}
 	return ret;
@@ -646,9 +713,12 @@ int _app2sd_unmount_app_content(const char *pkgid)
 {
 	int ret = APP2EXT_SUCCESS;
 	char app_dir_mmc_path[FILENAME_MAX] = { 0, };
+
 	snprintf(app_dir_mmc_path, FILENAME_MAX, "%s%s/.mmc", APP_INSTALLATION_PATH, pkgid);
 	if ((ret = umount(app_dir_mmc_path)) < 0) {
-		app2ext_print("Unable to umount the dir %s\n", strerror(errno));
+		char err_buf[1024] = {0,};
+		strerror_r(errno, err_buf, sizeof(err_buf));
+		app2ext_print("Unable to umount the dir %s\n", err_buf);
 	}
 	return ret;
 }
@@ -658,21 +728,20 @@ static int _app2sd_move_to_archive(const char *src_path, const char *arch_path)
 	int ret = APP2EXT_SUCCESS;
 
 	ret = _app2sd_copy_dir(src_path, arch_path);
-	if (ret) {
-		if (ret != APP2EXT_ERROR_ACCESS_FILE) {
-			app2ext_print
-			    ("App2Sd Error : unable to copy from %s to %s .....err is %s\n",
-			     src_path, arch_path, strerror(errno));
-			return APP2EXT_ERROR_MOVE;
-		}
+	if (ret && ret != APP2EXT_ERROR_ACCESS_FILE) {
+		char err_buf[1024] = {0,};
+		strerror_r(errno, err_buf, sizeof(err_buf));
+		app2ext_print("App2Sd Error : unable to copy from %s to %s .....err is %s\n",
+				src_path, arch_path, err_buf);
+		return APP2EXT_ERROR_MOVE;
 	}
+
 	ret = _app2sd_delete_directory((char *)src_path);
-	if (ret) {
-		if (ret != APP2EXT_ERROR_ACCESS_FILE) {
-			app2ext_print("App2Sd Error : unable to delete %s \n", src_path);
-			return APP2EXT_ERROR_DELETE_DIRECTORY;
-		}
+	if (ret && ret != APP2EXT_ERROR_ACCESS_FILE) {
+		app2ext_print("App2Sd Error : unable to delete %s \n", src_path);
+		return APP2EXT_ERROR_DELETE_DIRECTORY;
 	}
+
 	return ret;
 }
 
@@ -686,6 +755,7 @@ int _app2sd_move_app_to_external(const char *pkgid, GList* dir_list)
 	char mmc_path[FILENAME_MAX] = { 0, };
 	unsigned long long total_size = 0;
 	int reqd_size = 0;
+	int reqd_disk_size = 0;
 	char *device_node = NULL;
 	char *devi = NULL;
 	mode_t mode = DIR_PERMS;
@@ -694,7 +764,7 @@ int _app2sd_move_app_to_external(const char *pkgid, GList* dir_list)
 	GList *list = NULL;
 	app2ext_dir_details* dir_detail = NULL;
 
-	/*Check whether MMC is present or not */
+	/* Check whether MMC is present or not */
 	ret = _app2sd_check_mmc_status();
 	if (ret) {
 		app2ext_print
@@ -706,14 +776,14 @@ int _app2sd_move_app_to_external(const char *pkgid, GList* dir_list)
 	snprintf(mmc_path, FILENAME_MAX,
 		 "%s%s", APP2SD_PATH, pkgid);
 
-	/*check whether application is in external memory or not */
+	/* check whether application is in external memory or not */
 	fp = fopen(mmc_path, "r+");
 	if (fp != NULL) {
 		app2ext_print
 		    ("Already %s entry is present in the SD Card, delete entry and go on without return\n",
 		     pkgid);
 		fclose(fp);
-//		return APP2EXT_ERROR_ALREADY_FILE_PRESENT;
+		app2sd_force_clean(pkgid);
 	}
 
 	snprintf(app_mmc_path, FILENAME_MAX,
@@ -727,7 +797,6 @@ int _app2sd_move_app_to_external(const char *pkgid, GList* dir_list)
 			app2ext_print
 			    ("App2sd Error: Unable to create directory for archiving, error no is %d\n",
 			     errno);
-//			return APP2EXT_ERROR_CREATE_DIRECTORY;
 		}
 	}
 
@@ -749,9 +818,10 @@ int _app2sd_move_app_to_external(const char *pkgid, GList* dir_list)
 		list = g_list_next(list);
 	}
 
-	reqd_size = ((total_size / 1024) / 1024) + 2;
+	reqd_size = ((total_size)/( 1024 * 1024)) + 2;
+	reqd_disk_size = reqd_size + ceil(reqd_size * 0.2);
 
-	/*Find avialable free memory in the MMC card */
+	/* Find avialable free memory in the MMC card */
 	ret =
 	    _app2sd_get_available_free_memory
 	    (MMC_PATH, &free_mmc_mem);
@@ -761,22 +831,21 @@ int _app2sd_move_app_to_external(const char *pkgid, GList* dir_list)
 		     ret);
 		return APP2EXT_ERROR_MMC_STATUS;
 	}
-	/*If avaialalbe free memory in MMC is less than required size + 5MB , return error */
-	if (reqd_size > free_mmc_mem) {
+	/* If avaialalbe free memory in MMC is less than required size + 5MB , return error */
+	if (reqd_disk_size > free_mmc_mem) {
 		app2ext_print
 		    ("App2Sd Error : Insufficient memory in MMC for application installation %d\n",
 		     ret);
 		return APP2EXT_ERROR_MMC_INSUFFICIENT_MEMORY;
 	}
-	/*Create a loopback device */
+	/* Create a loopback device */
 	ret =
-	    _app2sd_create_loopback_device(pkgid, (reqd_size+PKG_BUF_SIZE));
+	    _app2sd_create_loopback_device(pkgid, (reqd_disk_size+PKG_BUF_SIZE));
 	if (ret) {
 		app2ext_print
 		    ("App2Sd Error : loopback node creation failed\n");
-//		return APP2EXT_ERROR_CREATE_DEVICE;
 	}
-	/*Perform Loopback encryption setup */
+	/* Perform Loopback encryption setup */
 	device_node =
 	    _app2sd_do_loopback_encryption_setup(pkgid);
 	if (!device_node) {
@@ -785,7 +854,7 @@ int _app2sd_move_app_to_external(const char *pkgid, GList* dir_list)
 		     device_node);
 		return APP2EXT_ERROR_DO_LOSETUP;
 	}
-	/*Check whether loopback device is associated with device node or not */
+	/* Check whether loopback device is associated with device node or not */
 	devi = _app2sd_find_associated_device_node(pkgid);
 	if (devi == NULL) {
 		app2ext_print
@@ -795,7 +864,7 @@ int _app2sd_move_app_to_external(const char *pkgid, GList* dir_list)
 		free(devi);
 		devi = NULL;
 	}
-	/*Format the loopback file system */
+	/* Format the loopback file system */
 	ret = _app2sd_create_file_system(device_node);
 	if (ret) {
 		app2ext_print
@@ -826,7 +895,6 @@ int _app2sd_move_app_to_external(const char *pkgid, GList* dir_list)
 					    ("App2Sd Error : unable to copy from %s to %s \n",
 					     path,
 					     app_archive_path);
-//					return APP2EXT_ERROR_MOVE;
 				}
 			}
 		}
@@ -834,7 +902,7 @@ int _app2sd_move_app_to_external(const char *pkgid, GList* dir_list)
 	}
 	/********Archiving code ends***********/
 
-	/*mount the loopback encrypted pseudo device on application installation path as with Read Write permission */
+	/* mount the loopback encrypted pseudo device on application installation path as with Read Write permission */
 	ret =
 	    _app2sd_mount_app_content(pkgid, device_node,
 				      MOUNT_TYPE_RW, dir_list,
@@ -860,17 +928,12 @@ int _app2sd_move_app_to_external(const char *pkgid, GList* dir_list)
 			     app_mmc_path);
 			if (ret) {
 				if (ret == APP2EXT_ERROR_ACCESS_FILE) {
-					app2ext_print
-					    ("App2Sd Error : unable to access %s\n",
-					     path);
+					app2ext_print("App2Sd Error : unable to access %s\n", path);
 				} else {
-					app2ext_print
-					    ("App2Sd Error : unable to copy from %s to %s .....err is %s\n",
-					     path,
-					     app_mmc_path,
-					     strerror
-					     (errno));
-//					return APP2EXT_ERROR_MOVE;
+					char err_buf[1024] = {0,};
+					strerror_r(errno, err_buf, sizeof(err_buf));
+					app2ext_print("App2Sd Error : unable to copy from %s to %s .....err is %s\n",
+							path, app_mmc_path, err_buf);
 				}
 			}
 			ret =
@@ -898,17 +961,19 @@ int _app2sd_move_app_to_external(const char *pkgid, GList* dir_list)
 		app2ext_print
 		    ("App2Sd Error : unable to delete %s \n",
 		     app_archive_path);
-//		return APP2EXT_ERROR_DELETE_DIRECTORY;
 	}
 
+	/* TODO */
+	/*
 	ret = _app2sd_apply_mmc_smack(pkgid, dir_list, pkgid);
+	*/
 	if (ret) {
 		app2ext_print("App2Sd Error : unable to apply app smack\n");
 		return APP2EXT_ERROR_MOVE;
 	}
 
-	/*Restore archive ends */
-	/*Re-mount the loopback encrypted pseudo device on application installation path as with Read Only permission */
+	/* Restore archive ends */
+	/* Re-mount the loopback encrypted pseudo device on application installation path as with Read Only permission */
 	ret = _app2sd_unmount_app_content(pkgid);
 	if (ret) {
 		return APP2EXT_ERROR_REMOUNT;
@@ -937,6 +1002,11 @@ int _app2sd_move_app_to_internal(const char *pkgid, GList* dir_list)
 	FILE *fp = NULL;
 	GList *list = NULL;
 	app2ext_dir_details* dir_detail = NULL;
+	int reqd_size = 0;
+	int free_internal_mem = 0;
+	struct statvfs buf = {0,};
+	unsigned long long temp = 0;
+	char err_buf[1024] = {0,};
 
 	snprintf(app_mmc_path, FILENAME_MAX,
 		 "%s%s/.mmc", APP_INSTALLATION_PATH,  pkgid);
@@ -947,7 +1017,7 @@ int _app2sd_move_app_to_internal(const char *pkgid, GList* dir_list)
 	snprintf(mmc_path, FILENAME_MAX,
 		 "%s%s", APP2SD_PATH, pkgid);
 
-	/*Check whether MMC is present or not */
+	/* Check whether MMC is present or not */
 	ret = _app2sd_check_mmc_status();
 	if (ret) {
 		app2ext_print
@@ -956,7 +1026,7 @@ int _app2sd_move_app_to_internal(const char *pkgid, GList* dir_list)
 		return APP2EXT_ERROR_MMC_STATUS;
 	}
 
-	/*check whether application is in external memory or not */
+	/* check whether application is in external memory or not */
 	fp = fopen(mmc_path, "r+");
 	if (fp == NULL) {
 		app2ext_print
@@ -968,11 +1038,54 @@ int _app2sd_move_app_to_internal(const char *pkgid, GList* dir_list)
 		fp = NULL;
 	}
 
-	/*Get the associated device node for SD card applicationer */
+	memset((void *)&buf, '\0', sizeof(struct statvfs));
+	ret = statvfs(INTERNAL_STORAGE_PATH, &buf);
+	if (0 == ret){
+		temp = (buf.f_bsize * buf.f_bavail)/(1024*1024);
+		free_internal_mem = (int)temp;
+	}else{
+		app2ext_print("App2SD Error: Unable to get internal storage size\n");
+		return APP2EXT_ERROR_MMC_INSUFFICIENT_MEMORY; /* TODO: new error no for internal? */
+	}
+
+	/* check app entry is there in sd card or not. */
+	snprintf(app_path, FILENAME_MAX, "%s%s", APP2SD_PATH,
+		 pkgid);
+	app2ext_print("App2Sd Log : Checking path %s\n", app_path);
+	fp = fopen(app_path, "r+");
+	if (fp == NULL) {
+		app2ext_print
+		    ("App2SD Error: App Entry is not present in SD Card\n");
+		return APP2EXT_ERROR_INVALID_PACKAGE;
+	}
+	fclose(fp);
+	/* Get installed app size*/
+	temp = _app2sd_calculate_file_size(app_path);
+	reqd_size = (int)((temp)/(1024 * 1024));
+	app2ext_print("App2Sd Log : Reqd size is %d\n", reqd_size);
+
+	if (reqd_size == 0) {
+		app2ext_print
+		    ("App2SD Error: App Entry is not present in SD Card\n");
+		return APP2EXT_ERROR_LOOPBACK_DEVICE_UNAVAILABLE;
+	}
+
+	app2ext_print("Reqd Size: %d MB, free internal mem %d MB\n", reqd_size, free_internal_mem);
+	/* If avaialalbe free memory in internal storage is less than required size, return error */
+	if (reqd_size > free_internal_mem) {
+		app2ext_print
+		    ("App2Sd Error : Insufficient memory in internal storage for application installation %d\n",
+		     ret);
+		return APP2EXT_ERROR_MMC_INSUFFICIENT_MEMORY; /* TODO: new error no for internal? */
+	}
+	/* Get the associated device node for SD card applicationer */
+	snprintf(app_path, FILENAME_MAX, "%s%s/", APP_INSTALLATION_PATH,
+		 pkgid);
+
 	device_node =
 	    _app2sd_find_associated_device_node(pkgid);
 	if (NULL == device_node) {
-		/*Do loopback setup */
+		/* Do loopback setup */
 		device_node =
 		    _app2sd_do_loopback_encryption_setup
 		    (pkgid);
@@ -981,7 +1094,7 @@ int _app2sd_move_app_to_internal(const char *pkgid, GList* dir_list)
 			    ("App2Sd Error : loopback encryption setup failed\n");
 			return APP2EXT_ERROR_DO_LOSETUP;
 		}
-		/*Do  mounting */
+		/* Do mounting */
 		ret =
 		    _app2sd_mount_app_content(pkgid,
 					      device_node,
@@ -994,7 +1107,7 @@ int _app2sd_move_app_to_internal(const char *pkgid, GList* dir_list)
 			return APP2EXT_ERROR_MOUNT_PATH;
 		}
 	} else {
-		/*Do  re-mounting */
+		/* Do re-mounting */
 		ret =
 		    _app2sd_mount_app_content(pkgid,
 					      device_node,
@@ -1012,7 +1125,6 @@ int _app2sd_move_app_to_internal(const char *pkgid, GList* dir_list)
 		app2ext_print
 		    ("App2Sd Error : unable to create directory%s\n",
 		     app_archive_path);
-//		return APP2EXT_ERROR_CREATE_DIRECTORY;
 	}
 
 
@@ -1021,7 +1133,7 @@ int _app2sd_move_app_to_internal(const char *pkgid, GList* dir_list)
 		dir_detail = (app2ext_dir_details *)list->data;
 		if (dir_detail && dir_detail->name
 			&& dir_detail->type == APP2EXT_DIR_RO) {
-				/*Archiving code */
+				/* Archiving code */
 				memset((void *)&path, '\0',
 				       FILENAME_MAX);
 				snprintf(path, FILENAME_MAX,
@@ -1034,21 +1146,15 @@ int _app2sd_move_app_to_internal(const char *pkgid, GList* dir_list)
 				     app_archive_path);
 				if (ret) {
 					if (ret == APP2EXT_ERROR_ACCESS_FILE) {
-						app2ext_print
-						    ("App2Sd Error : unable to access %s\n",
-						     path);
+						app2ext_print("App2Sd Error : unable to access %s\n", path);
 					} else {
-						app2ext_print
-						    ("App2Sd Error : unable to copy from %s to %s .....err is %s\n",
-						     path,
-						     app_archive_path,
-						     strerror
-						     (errno));
-//						return APP2EXT_ERROR_MOVE;
+						strerror_r(errno, err_buf, sizeof(err_buf));
+						app2ext_print("App2Sd Error : unable to copy from %s to %s .....err is %s\n",
+								path, app_archive_path, err_buf);
 					}
 				}
 
-				/*Delete the symbolic link files [bin, lib, res]*/
+				/* Delete the symbolic link files [bin, lib, res]*/
 				memset((void *)&path, '\0',
 				       FILENAME_MAX);
 				snprintf(path, FILENAME_MAX,
@@ -1058,46 +1164,34 @@ int _app2sd_move_app_to_internal(const char *pkgid, GList* dir_list)
 				ret = unlink(path);
 				if (ret) {
 					if (errno == ENOENT) {
-						app2ext_print
-						    ("App2Sd Error : Directory %s does not exist\n",
-						     path);
+						app2ext_print("App2Sd Error : Directory %s does not exist\n", path);
 					} else {
-						app2ext_print
-						    ("App2Sd Error : unable to remove the symbolic link file %s, it is already unlinked!!!\n",
-						     path);
-//						return APP2EXT_ERROR_DELETE_LINK_FILE;
+						app2ext_print("App2Sd Error : unable to remove the symbolic link file %s,"
+								" it is already unlinked!!!\n", path);
 					}
 				}
 
-				/*Copy content to destination */
+				/* Copy content to destination */
 				memset((void *)&path, '\0',
 				       FILENAME_MAX);
 				snprintf(path, FILENAME_MAX,
-					 "%s%s/.archive/%s", APP_INSTALLATION_PATH,
-					 pkgid,
-					 dir_detail->name);
-				ret =
-				    _app2sd_copy_dir
-				    (path, app_path);
+					"%s%s/.archive/%s", APP_INSTALLATION_PATH,
+					 pkgid, dir_detail->name);
+				ret = _app2sd_copy_dir(path, app_path);
 				if (ret) {
 					if (ret == APP2EXT_ERROR_ACCESS_FILE) {
-						app2ext_print
-						    ("App2Sd Error : unable to access %s\n",
-						     path);
+						app2ext_print("App2Sd Error : unable to access %s\n", path);
 					} else {
-						app2ext_print
-						    ("App2Sd Error : unable to copy from %s to %s .....err is %s\n",
-						     path,
-						     app_path,
-						     strerror
-						     (errno));
-//						return APP2EXT_ERROR_MOVE;
+						strerror_r(errno, err_buf, sizeof(err_buf));
+						app2ext_print("App2Sd Error : unable to copy from %s to %s .....err is %s\n",
+								path, app_path, err_buf);
 					}
 				}
 		}
 		list = g_list_next(list);
 	}
 
+	app2ext_print("App2Sd info : Copying file completed\n");
 	ret = _app2sd_unmount_app_content(pkgid);
 	if (ret) {
 		app2ext_print
@@ -1125,17 +1219,18 @@ int _app2sd_move_app_to_internal(const char *pkgid, GList* dir_list)
 		app2ext_print
 		    ("App2Sd Error : unable to delete %s \n",
 		     app_mmc_path);
-//		return APP2EXT_ERROR_DELETE_DIRECTORY;
 	}
 	ret = _app2sd_delete_directory(app_archive_path);
 	if (ret) {
 		app2ext_print
 		    ("App2Sd Error : unable to delete %s \n",
 		     app_archive_path);
-//		return APP2EXT_ERROR_DELETE_DIRECTORY;
 	}
 
+	/* TODO */
+	/*
 	ret = _app2sd_apply_app_smack(pkgid, dir_list, pkgid);
+	*/
 	if (ret) {
 		app2ext_print("App2Sd Error : unable to apply app smack\n");
 		return APP2EXT_ERROR_MOVE;
@@ -1148,7 +1243,7 @@ int _app2sd_move_app(const char *pkgid, app2ext_move_type move_cmd, GList* dir_l
 {
 	int ret = APP2EXT_SUCCESS;
 
-	/*Check whether MMC is present or not */
+	/* Check whether MMC is present or not */
 	ret = _app2sd_check_mmc_status();
 	if (ret) {
 		app2ext_print
@@ -1242,7 +1337,7 @@ int _app2sd_duplicate_device(const char *pkgid, GList* dir_list, char *dev_node,
 	int err_res = 0;
 	char *result = NULL;
 
-	/*Create a new loopback device */
+	/* Create a new loopback device */
 	snprintf(temp_pkgid, FILENAME_MAX,
 		 "%s.new", pkgid);
 	ret = _app2sd_create_loopback_device(temp_pkgid, (size+PKG_BUF_SIZE));
@@ -1251,7 +1346,7 @@ int _app2sd_duplicate_device(const char *pkgid, GList* dir_list, char *dev_node,
 		return ret;
 	}
 	app2ext_print("App2Sd  : _app2sd_create_loopback_device SUCCESS\n");
-	/*Perform Loopback encryption setup */
+	/* Perform Loopback encryption setup */
 	dev_node = _app2sd_do_loopback_duplicate_encryption_setup(pkgid, temp_pkgid);
 	if (!dev_node) {
 		app2ext_print("App2Sd Error : losetup failed, device node is %s\n", dev_node);
@@ -1260,7 +1355,7 @@ int _app2sd_duplicate_device(const char *pkgid, GList* dir_list, char *dev_node,
 		return APP2EXT_ERROR_DO_LOSETUP;
 	}
 	app2ext_print("App2Sd  : _app2sd_do_loopback_duplicate_encryption_setup SUCCESS\n");
-	/*Check whether loopback device is associated with device node or not */
+	/* Check whether loopback device is associated with device node or not */
 	devi = _app2sd_find_associated_device_node(temp_pkgid);
 	if (devi == NULL) {
 		app2ext_print("App2Sd Error : finding associated device node failed\n");
@@ -1268,7 +1363,7 @@ int _app2sd_duplicate_device(const char *pkgid, GList* dir_list, char *dev_node,
 		goto FINISH_OFF;
 	}
 	app2ext_print("App2Sd  : _app2sd_find_associated_device_node SUCCESS\n");
-	/*Format the loopback file system */
+	/* Format the loopback file system */
 	ret = _app2sd_create_file_system(dev_node);
 	if (ret) {
 		app2ext_print("App2Sd Error : creating FS failed failed\n");
@@ -1276,7 +1371,7 @@ int _app2sd_duplicate_device(const char *pkgid, GList* dir_list, char *dev_node,
 		goto FINISH_OFF;
 	}
 	app2ext_print("App2Sd  : _app2sd_create_file_system SUCCESS\n");
-	/*Do  mounting for new dev*/
+	/* Do mounting for new dev*/
 	ret =
 	    _app2sd_mount_app_content(temp_pkgid, dev_node, MOUNT_TYPE_RW,
 				dir_list, APP2SD_PRE_UPGRADE);
@@ -1332,14 +1427,14 @@ int _app2sd_update_loopback_device_size(const char *pkgid,
 	}
 
 	app2ext_print("App2Sd  : _app2sd_mount_app_content SUCCESS\n");
-	/*check app entry is there in sd card or not. */
+	/* check app entry is there in sd card or not. */
 	snprintf(app_path, FILENAME_MAX, "%s%s", APP2SD_PATH,
 		 pkgid);
 
-	/*Get the associated device node for SD card applicatione */
+	/* Get the associated device node for SD card applicatione */
 	old_device_node = _app2sd_find_associated_device_node(pkgid);
 	if (NULL == old_device_node) {
-		/*Do loopback setup */
+		/* Do loopback setup */
 		old_device_node = _app2sd_do_loopback_encryption_setup(pkgid);
 		if (old_device_node == NULL) {
 			app2ext_print
@@ -1347,7 +1442,7 @@ int _app2sd_update_loopback_device_size(const char *pkgid,
 			err_res = APP2EXT_ERROR_DO_LOSETUP;
 			goto FINISH_OFF;
 		}
-		/*Do  mounting */
+		/* Do mounting */
 		ret =
 		    _app2sd_mount_app_content(pkgid, old_device_node,
 					      MOUNT_TYPE_RW, dir_list,
@@ -1355,10 +1450,9 @@ int _app2sd_update_loopback_device_size(const char *pkgid,
 		if (ret) {
 			app2ext_print("App2Sd Error : Re-mount failed\n");
 			err_res = APP2EXT_ERROR_MOUNT_PATH;
-//			goto FINISH_OFF;
 		}
 	} else {
-		/*Do  re-mounting */
+		/* Do re-mounting */
 		ret =
 		    _app2sd_mount_app_content(pkgid, old_device_node,
 					      MOUNT_TYPE_RW_REMOUNT, dir_list,
@@ -1366,7 +1460,6 @@ int _app2sd_update_loopback_device_size(const char *pkgid,
 		if (ret) {
 			app2ext_print("App2Sd Error : Re-mount failed\n");
 			err_res = APP2EXT_ERROR_MOUNT_PATH;
-//			goto FINISH_OFF;
 		}
 	}
 
@@ -1379,7 +1472,6 @@ int _app2sd_update_loopback_device_size(const char *pkgid,
 	if (ret) {
 		app2ext_print("App2Sd Error : copy ro content  failed\n");
 		err_res = ret;
-//		goto FINISH_OFF;
 	}
 
 	ret = _app2sd_unmount_app_content(pkgid);
@@ -1387,13 +1479,11 @@ int _app2sd_update_loopback_device_size(const char *pkgid,
 		app2ext_print
 		    ("App2SD Error: Unable to unmount the SD application\n");
 		err_res = APP2EXT_ERROR_UNMOUNT;
-//		goto FINISH_OFF;
 	}
 	ret = _app2sd_remove_loopback_encryption_setup(pkgid);
 	if (ret) {
 		app2ext_print("App2SD Error: Unable to remove loopback setup\n");
 		err_res = APP2EXT_ERROR_DELETE_LOOPBACK_DEVICE;
-//		goto FINISH_OFF;
 	}
 	ret = _app2sd_unmount_app_content(temp_pkgid);
 	if (ret) {
