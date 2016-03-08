@@ -7,6 +7,6 @@ includedir=@INCLUDE_INSTALL_DIR@
 Name: app2sd
 Description: The app2sd Library
 Version: 1.1.0
-Requires: vconf dlog
+Requires: vconf dlog libtzplatform-config
 Cflags: -I${includedir}
 Libs: -L${libdir} -lapp2sd -lapp2ext

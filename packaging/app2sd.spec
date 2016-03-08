@@ -1,40 +1,50 @@
 Name:       app2sd
 Summary:    Application installation on external memory
-Version:    0.5.27
-Release:    0
+Version:    0.5.42
+Release:    1
 Group:      Application Framework/Package Management
 License:    Apache-2.0
 Source0:    %{name}-%{version}.tar.gz
-Source1001:     app2sd.manifest
 
-BuildRequires:  cmake
-BuildRequires:  pkgconfig(db-util)
-BuildRequires:  pkgconfig(dlog)
 BuildRequires:  pkgconfig(libssl)
-BuildRequires:  pkgconfig(openssl)
-BuildRequires:  pkgconfig(pkgmgr-info)
 BuildRequires:  pkgconfig(vconf)
+BuildRequires:  pkgconfig(dlog)
+BuildRequires:  pkgconfig(openssl)
+BuildRequires:  pkgconfig(db-util)
+BuildRequires:  pkgconfig(pkgmgr-info)
+BuildRequires:  pkgconfig(libprivilege-control)
 BuildRequires:  pkgconfig(libtzplatform-config)
+BuildRequires:  cmake
 
 %description
 Tizen application installation on external memory
 
 %package devel
-Summary:        Application install on external memory (devel)
-Requires:       app2sd = %{version}-%{release}
+Summary:    Application install on external memory (devel)
+Group:      Development/Libraries
+Requires:   app2sd = %{version}-%{release}
 
 %description devel
 Tizen application installation on external memory (devel)
 
+%package test
+Summary:    Application install on external memory (test)
+Group:      Development/Libraries
+Requires:   app2sd = %{version}-%{release}
+
+%description test
+Tizen application installation on external memory (test)
+
 %prep
 %setup -q
-cp %{SOURCE1001} .
 
 %build
 %cmake .
-make %{?_smp_mflags}
+
+make %{?jobs:-j%jobs}
 
 %install
+rm -rf %{buildroot}
 %make_install
 
 mkdir -p %{buildroot}/usr/share/license
@@ -45,19 +55,21 @@ cp LICENSE %{buildroot}/usr/share/license/%{name}
 %postun -p /sbin/ldconfig
 
 %files
-%manifest %{name}.manifest
+%manifest app2sd.manifest
 %defattr(-,root,root,-)
 %{_libdir}/libapp2ext.so.*
 %{_libdir}/libapp2sd.so*
 /usr/share/license/%{name}
 
+
 %files devel
-%manifest %{name}.manifest
 %defattr(-,root,root,-)
 %{_includedir}/app2ext_interface.h
 %{_libdir}/pkgconfig/app2sd.pc
 %{_libdir}/libapp2sd.so
 %{_libdir}/libapp2ext.so
 
-
+%files test
+%defattr(-,root,root,-)
+%{_bindir}/test_app2ext
 

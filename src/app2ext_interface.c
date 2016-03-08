@@ -120,6 +120,13 @@ int app2ext_get_app_location(const char *appname)
 	snprintf(app_mmc_internal_path, FILENAME_MAX,
 	"%s%s/.mmc", APP_INSTALLATION_PATH, appname);
 
+	app2ext_print("MMC_PATH = (%s)\n", MMC_PATH);
+	app2ext_print("APP2SD_PATH = (%s)\n", APP2SD_PATH);
+	app2ext_print("APP_INSTALLATION_PATH = (%s)\n", APP_INSTALLATION_PATH);
+	app2ext_print("APP_INSTALLATION_USER_PATH = (%s)\n", APP_INSTALLATION_USER_PATH);
+	app2ext_print("app_dir_path = (%s)\n", app_dir_path);
+	app2ext_print("app_mmc_path = (%s)\n", app_mmc_path);
+	app2ext_print("app_mmc_internal_path = (%s)\n", app_mmc_internal_path);
 
 	/*check whether application is in external memory or not */
 	fp = fopen(app_mmc_path, "r");
@@ -132,6 +139,7 @@ int app2ext_get_app_location(const char *appname)
 	/*check whether application is in internal or not */
 	fp = fopen(app_dir_path, "r");
 	if (fp == NULL) {
+		app2ext_print("app_dir_path open failed, package not installed\n");
 		return APP2EXT_NOT_INSTALLED;
 	} else {
 		fclose(fp);
@@ -139,9 +147,11 @@ int app2ext_get_app_location(const char *appname)
 			but SD card is not present*/
 		fp = fopen(app_mmc_internal_path, "r");
 		if (fp == NULL) {
+			app2ext_print("internal mem\n");
 			return APP2EXT_INTERNAL_MEM;
 		} else {
 			fclose(fp);
+			app2ext_print("app_mmc_internal_path exists, error mmc status\n");
 			return APP2EXT_ERROR_MMC_STATUS;
 		}
 	}
@@ -173,6 +183,7 @@ int app2ext_enable_external_pkg(const char *pkgid)
 
 		app2_handle->interface.enable(pkgid);
 		app2ext_deinit(app2_handle);
+		app2ext_print("App2Ext enable_external_pkg [%s]\n", pkgid);
 	}
 	return 0;
 }
@@ -203,6 +214,7 @@ int app2ext_disable_external_pkg(const char *pkgid)
 
 		app2_handle->interface.disable(pkgid);
 		app2ext_deinit(app2_handle);
+		app2ext_print("App2Ext disable_external_pkg [%s]\n", pkgid);
 	}
 	return 0;
 }
@@ -212,7 +224,7 @@ int app2ext_enable_external_dir(void)
 	int ret = 0;
 	DIR *dir = NULL;
 	char buf[FILENAME_MAX] = { 0, };
-	struct dirent entry, *result;
+	struct dirent entry, *result = NULL;
 
 	dir = opendir(APP2SD_PATH);
 	if (!dir) {
@@ -236,7 +248,7 @@ int app2ext_disable_external_dir(void)
 	int ret = 0;
 	DIR *dir = NULL;
 	char buf[FILENAME_MAX] = { 0, };
-	struct dirent entry, *result;
+	struct dirent entry, *result = NULL;
 
 	dir = opendir(APP2SD_PATH);
 	if (!dir) {
@@ -254,3 +266,36 @@ int app2ext_disable_external_dir(void)
 	closedir(dir);
 	return 0;
 }
+
+int app2ext_force_clean_pkg(const char *pkgid)
+{
+	/*Validate the function parameter received */
+	if (pkgid == NULL) {
+		app2ext_print("invalid func parameters\n");
+		return 0;
+	}
+
+	FILE *fp = NULL;
+	app2ext_handle *app2_handle = NULL;
+	char app_mmc_path[FILENAME_MAX] = { 0, };
+	snprintf(app_mmc_path, FILENAME_MAX, "%s%s/.mmc", APP_INSTALLATION_PATH, pkgid);
+
+	fp = fopen(app_mmc_path, "r");
+	if (fp == NULL) {
+		return 0;
+	} else {
+		fclose(fp);
+	}
+
+	app2_handle = app2ext_init(APP2EXT_SD_CARD);
+	if (app2_handle == NULL) {
+		app2ext_print("app2_handle : app2ext init failed\n");
+		return 0;
+	}
+
+	app2_handle->interface.force_clean(pkgid);
+	app2ext_deinit(app2_handle);
+	app2ext_print("App2Ext force_clean_pkg [%s]\n", pkgid);
+	return 0;
+}
+
