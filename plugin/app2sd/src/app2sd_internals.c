@@ -46,7 +46,7 @@ extern int app2sd_force_clean(const char *pkgid);
 
 /*
 ########### Internal APIs ##################
- */
+
 static int _app2sd_setup_path(const char *pkgid, const char *dirpath,
 		int apppathtype, const char *groupid)
 {
@@ -62,6 +62,7 @@ static int _app2sd_setup_path(const char *pkgid, const char *dirpath,
 
 	return ret;
 }
+*/
 
 /*
 static int _app2sd_apply_app_smack(const char *pkgid, GList* dir_list, const char *groupid)

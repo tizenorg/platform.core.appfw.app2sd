@@ -90,8 +90,6 @@ char error_list[45][100] = {
 
 static int __get_integer_input_data(void);
 
-static char *__get_string_input_data(void);
-
 static int __get_integer_input_data(void)
 {
 	char input_str[32] = { 0, };
