@@ -35,8 +35,7 @@
 
 app2ext_handle *handle = NULL;
 
-#define PKGNAME_INSTALL "org.example.basicuiapplication"
-#define PKGNAME_UPGRADE "org.example.basicuiapplication"
+#define TEST_PKGNAME "org.example.basicuiapplication"
 
 char pkg_ro_content_rpm[3][5] = { "bin", "res", "lib" };
 
@@ -108,17 +107,19 @@ static int __get_integer_input_data(void)
 	return data;
 }
 
-static void Usage(void)
+static void usage(void)
 {
 	printf("\n*********************************************\n");
-	printf("\n Test Suite Usage \n");
-	printf("\n Test_id	test_case\n");
-	printf("\n   1		TC_app_install (Pre-install,Install, Post-install, OnDemand init, App Launch, OnDemand Exit)\n");
-	printf("\n   2		TC_app_uninstall (Pre-uninstall, Uninstall, Post-uninstall)\n");
-	printf("\n   3		TC_app_upgrade (Pre-upgrade, Upgrade, Post-Upgrade)\n");
-	printf("\n   4		TC_app_move\n");
-	printf("\n   5		TC_app_get_location\n");
-	printf("\n   6		Exit\n");
+	printf("app2sd test\n");
+	printf("test_case\n");
+	printf("<1> app_install (pre-install, install, post-install, enable, launch, disable)\n");
+	printf("<2> app_uninstall (pre-uninstall, uninstall, post-uninstall)\n");
+	printf("<3> app_upgrade (pre-upgrade, upgrade, post-Upgrade)\n");
+	printf("<4> app_move\n");
+	printf("<5> app_get_location\n");
+        printf("<6> enable_external_dir\n");
+        printf("<7> disable_external_dir\n");
+	printf("<8> exit\n");
 }
 
 GList * populate_dir_details()
@@ -185,23 +186,23 @@ void clear_dir_list(GList* dir_list)
 	}
 }
 
-int TC_app_install()
+int app_install()
 {
-	printf("TC_app_install %s \n", PKGNAME_INSTALL);
+	printf("app_install %s\n", TEST_PKGNAME);
 	GList *dir_list = NULL;
 	int ret = -1;
 
 	//char cmd_install[CMD_LEN+1];
-	//snprintf(cmd_install, CMD_LEN,"tpk-backend -y %s", PKGNAME_INSTALL);
+	//snprintf(cmd_install, CMD_LEN,"tpk-backend -y %s", TEST_PKGNAME);
 
 	dir_list = populate_dir_details();
 	if (dir_list == NULL) {
-		printf("\nError in populating the directory list\n");
+		printf("Error in populating the directory list\n");
 		return -1;
 	}
-	ret = handle->interface.pre_install(PKGNAME_INSTALL, dir_list, 20);
+	ret = handle->interface.pre_install(TEST_PKGNAME, dir_list, 20);
 	if (ret) {
-		printf("\n TC : pre app install API fail. Reason %s", error_list[ret]);
+		printf("pre_install failed(%s)\n", error_list[ret]);
 		clear_dir_list(dir_list);
 		return -1;
 	}
@@ -211,33 +212,33 @@ int TC_app_install()
 	ret = system(cmd_install);
 	if (ret) {
 
-		printf("\n TC :  tpk-backend  install command  fail %d ", ret);
-		ret = handle->interface.post_install(PKGNAME_INSTALL, 1);
+		printf("tpk-backend  install command  fail %d ", ret);
+		ret = handle->interface.post_install(TEST_PKGNAME, 1);
 		if (ret) {
-			printf("\n TC : post app install API fail Reason %s", error_list[ret]);
+			printf("post_install failed(%s)\n", error_list[ret]);
 		}
 		clear_dir_list(dir_list);
 		return -1;
 	}
 	*/
 
-	ret = handle->interface.post_install(PKGNAME_INSTALL, 2);
+	ret = handle->interface.post_install(TEST_PKGNAME, 2);
 	if (ret) {
-		printf("\n TC : post app install API fail Reason %s", error_list[ret]);
+		printf("post_install failed(%s)\n", error_list[ret]);
 		clear_dir_list(dir_list);
 		return -1;
 	}
 
-	ret = handle->interface.enable(PKGNAME_INSTALL);
+	ret = handle->interface.enable(TEST_PKGNAME);
 	if (ret) {
-		printf("\n TC : app enable API fail Reason %s", error_list[ret]);
+		printf("enable failed(%s)\n", error_list[ret]);
 		clear_dir_list(dir_list);
 		return -1;
 	}
 
 	/*
 	printf("\nLaunching application after install");
-	ret = aul_open_app(PKGNAME_INSTALL);
+	ret = aul_open_app(TEST_PKGNAME);
 
 	if (ret < 0)
 		printf("\n launch fail");
@@ -255,26 +256,28 @@ int TC_app_install()
 	sleep(5);
 	*/
 
-	ret = handle->interface.disable(PKGNAME_INSTALL);
+	ret = handle->interface.disable(TEST_PKGNAME);
 	if (ret < 0 || ret > 44) {
-		printf("Unknown error\n");
+		printf("disable failed : unknown error\n");
 	} else {
-		printf("Returned Result: %s\n", error_list[ret]);
+		printf("disable return(%s)\n", error_list[ret]);
 	}
+
 	clear_dir_list(dir_list);
+
 	return ret;
 }
 
-int TC_app_uninstall()
+int app_uninstall()
 {
-	printf("TC_app_uninstall  %s \n", PKGNAME_INSTALL);
+	printf("app_uninstall  %s\n", TEST_PKGNAME);
 	int ret = -1;
 	//char cmd_uninstall[CMD_LEN+1];
-	//snprintf(cmd_uninstall, CMD_LEN, "tpk-backend -y %s", PKGNAME_INSTALL);
+	//snprintf(cmd_uninstall, CMD_LEN, "tpk-backend -y %s", TEST_PKGNAME);
 
-	ret = handle->interface.pre_uninstall(PKGNAME_INSTALL);
+	ret = handle->interface.pre_uninstall(TEST_PKGNAME);
 	if (ret) {
-		printf("\n TC : pre app uninstall API fail. Reason %s", error_list[ret]);
+		printf("pre_uninstall failed(%s)", error_list[ret]);
 		return -1;
 	}
 
@@ -282,36 +285,36 @@ int TC_app_uninstall()
 	printf("\n cmd_uninstall is %s ", cmd_uninstall);
 	ret = system(cmd_uninstall);
 	if (ret) {
-		printf("\n TC :  rpm  uninstall command  fail Reason %s", error_list[ret]);
+		printf("\nrpm  uninstall command  fail Reason %s", error_list[ret]);
 		return -1;
 	}
 	*/
 
-	ret = handle->interface.post_uninstall(PKGNAME_INSTALL);
+	ret = handle->interface.post_uninstall(TEST_PKGNAME);
 	if (ret) {
-		printf("\n TC : post app uninstall API fail Reason %s", error_list[ret]);
+		printf("post app uninstall API fail Reason %s\n", error_list[ret]);
 		return -1;
 	}
 
 	return ret;
 }
 
-int TC_app_upgrade()
+int app_upgrade()
 {
-	printf("TC_app_uninstall  %s \n", PKGNAME_INSTALL);
+	printf("app_upgrade  %s\n", TEST_PKGNAME);
 	int ret = -1;
 	//char cmd_uninstall[CMD_LEN+1];
-	//snprintf(cmd_uninstall, CMD_LEN, "rpm -U %s", PKGNAME_UPGRADE);
+	//snprintf(cmd_uninstall, CMD_LEN, "rpm -U %s", TEST_PKGNAME);
 
 	GList *dir_list = populate_dir_details();
 	if (dir_list == NULL) {
-		printf("\nError in populating the directory list\n");
+		printf("Error in populating the directory list\n");
 		return -1;
 	}
 
-	ret = handle->interface.pre_upgrade(PKGNAME_INSTALL, dir_list, 40);
+	ret = handle->interface.pre_upgrade(TEST_PKGNAME, dir_list, 40);
 	if (ret) {
-		printf("\n TC : pre app upgrade API fail. Reason %s", error_list[ret]);
+		printf("pre app upgrade API fail. Reason %s\n", error_list[ret]);
 		clear_dir_list(dir_list);
 		return -1;
 	}
@@ -320,17 +323,17 @@ int TC_app_upgrade()
 	printf("\n cmd_uninstall is %s ", cmd_uninstall);
 	ret = system(cmd_uninstall);
 	if (ret) {
-		printf("\n TC :  rpm  upgrade command  fail Reason %s", error_list[ret]);
-		ret = handle->interface.post_upgrade(PKGNAME_INSTALL_RPM, 1);
+		printf("\nrpm  upgrade command  fail Reason %s", error_list[ret]);
+		ret = handle->interface.post_upgrade(TEST_PKGNAME_RPM, 1);
 		if (ret) {
-			printf("\n TC : post app upgrade API fail Reason %s", error_list[ret]);
+			printf("post app upgrade API fail Reason %s\n", error_list[ret]);
 		}
 		clear_dir_list(dir_list);
 		return -1;
 	}
 	*/
 
-	ret = handle->interface.post_upgrade(PKGNAME_INSTALL, 2);
+	ret = handle->interface.post_upgrade(TEST_PKGNAME, 2);
 	if (ret) {
 		printf("\n TC : post app upgrade API fail Reason %s", error_list[ret]);
 		clear_dir_list(dir_list);
@@ -340,9 +343,9 @@ int TC_app_upgrade()
 	return ret;
 }
 
-int TC_app_move()
+int app_move()
 {
-	printf("TC_app_move  %s \n", PKGNAME_INSTALL);
+	printf("app_move  %s\n", TEST_PKGNAME);
 	int ret = -1;
 	int ret_check = -1;
 	GList *dir_list = populate_dir_details();
@@ -351,36 +354,36 @@ int TC_app_move()
 		return -1;
 	}
 
-	ret = app2ext_get_app_location(PKGNAME_INSTALL);
+	ret = app2ext_get_app_location(TEST_PKGNAME);
 	printf("return value = (%d)", ret);
 	if (ret == APP2EXT_SD_CARD) {
-		printf("\n app %s is in sd card ", PKGNAME_INSTALL);
+		printf("\n app %s is in sd card ", TEST_PKGNAME);
 		printf("\n app  %s  will be moved to internal memory ",
-		       PKGNAME_INSTALL);
-		ret = handle->interface.move(PKGNAME_INSTALL, dir_list, APP2EXT_MOVE_TO_PHONE);
+		       TEST_PKGNAME);
+		ret = handle->interface.move(TEST_PKGNAME, dir_list, APP2EXT_MOVE_TO_PHONE);
 		if (ret) {
 			printf("\n  TC: move API failed Reason %s", error_list[ret]);
 			clear_dir_list(dir_list);
 			return -1;
 		}
-		ret = app2ext_get_app_location(PKGNAME_INSTALL);
+		ret = app2ext_get_app_location(TEST_PKGNAME);
 		if (ret_check == APP2EXT_INTERNAL_MEM)
 			printf("\n app %s is moved to internal memory ",
-			       PKGNAME_INSTALL);
+			       TEST_PKGNAME);
 	} else if (ret == APP2EXT_INTERNAL_MEM) {
-		printf("\n app %s  is  in internal memory ", PKGNAME_INSTALL);
-		printf("\n app %s will be moved to sd card", PKGNAME_INSTALL);
+		printf("\n app %s  is  in internal memory ", TEST_PKGNAME);
+		printf("\n app %s will be moved to sd card", TEST_PKGNAME);
 
-		ret = handle->interface.move(PKGNAME_INSTALL, dir_list, APP2EXT_MOVE_TO_EXT);
+		ret = handle->interface.move(TEST_PKGNAME, dir_list, APP2EXT_MOVE_TO_EXT);
 		if (ret) {
 			printf("\n  TC: move API failed Reason %s", error_list[ret]);
 			clear_dir_list(dir_list);
 			return -1;
 		}
-		ret = app2ext_get_app_location(PKGNAME_INSTALL);
+		ret = app2ext_get_app_location(TEST_PKGNAME);
 		if (ret_check == APP2EXT_SD_CARD)
 			printf("\n app %s is moved to sd card ",
-			       PKGNAME_INSTALL);
+			       TEST_PKGNAME);
 	}  else {
 		ret = APP2EXT_ERROR_INVALID_PACKAGE;
 		printf("\n errorReason %s", error_list[ret]);
@@ -391,24 +394,24 @@ int TC_app_move()
 	return ret;
 }
 
-void TC_app_get_location()
+void app_get_location()
 {
-	printf("TC_app_get_location  %s \n", PKGNAME_INSTALL);
+	printf("app_get_location  %s \n", TEST_PKGNAME);
 	int ret = -1;
 
-	ret = app2ext_get_app_location(PKGNAME_INSTALL);
+	ret = app2ext_get_app_location(TEST_PKGNAME);
 	if (ret == APP2EXT_SD_CARD) {
-		printf("\n app %s is in sd card ", PKGNAME_INSTALL);
+		printf("\n app %s is in sd card ", TEST_PKGNAME);
 	} else if (ret == APP2EXT_INTERNAL_MEM) {
-		printf("\n app %s  is  in internal memory ", PKGNAME_INSTALL);
+		printf("\n app %s  is  in internal memory ", TEST_PKGNAME);
 	} else {
-		printf("\napp %s is not installed", PKGNAME_INSTALL);
+		printf("\napp %s is not installed", TEST_PKGNAME);
 	}
 }
 
-void TC_enable_external_dir()
+void enable_external_dir()
 {
-	printf("TC_enable_external_dir\n");
+	printf("enable_external_dir\n");
 	int ret = -1;
 
 	ret = app2ext_enable_external_dir();
@@ -419,9 +422,9 @@ void TC_enable_external_dir()
 	}
 }
 
-void TC_disable_external_dir()
+void disable_external_dir()
 {
-	printf("TC_disable_external_dir\n");
+	printf("disable_external_dir\n");
 	int ret = -1;
 
 	ret = app2ext_disable_external_dir();
@@ -434,70 +437,54 @@ void TC_disable_external_dir()
 
 int main(int argc, char **argv)
 {
-	printf("\nEnter plug-in type: 1. App2SD 2. App2mUSB 3.App2CLOUD\n");
-	int plugin = __get_integer_input_data();
 	int ret = 0;
-	if (plugin !=1) {
-		printf("Plug-in type currently not supported");
-		return -1;
-	}
+
+	/* check authorized user */
+
 	handle = app2ext_init(APP2EXT_SD_CARD);
 	if (handle == NULL) {
 		ret = APP2EXT_ERROR_PLUGIN_INIT_FAILED;
-		printf("app2ext_init. Reason:%s\n", error_list[ret]);
+		printf("app2ext_init failed (%s)\n", error_list[ret]);
 		return -1;
 	}
+
 	do {
-		Usage();
-		printf("Enter Option for testing\n");
+		usage();
+		printf("enter testcase\n");
 		int option = __get_integer_input_data();
 		switch (option) {
 		case 1:
-			{
-				TC_app_install();
-				break;
-			}
+			app_install();
+			break;
 		case 2:
-			{
-				TC_app_uninstall();
-				break;
-			}
+			app_uninstall();
+			break;
 		case 3:
-			{
-				TC_app_upgrade();
-				break;
-			}
+			app_upgrade();
+			break;
 		case 4:
-			{
-				TC_app_move();
-				break;
-			}
+			app_move();
+			break;
 		case 5:
-			{
-				TC_app_get_location();
-				break;
-			}
+			app_get_location();
+			break;
 		case 6:
-			{
-				TC_enable_external_dir();
-				break;
-			}
+			enable_external_dir();
+			break;
 		case 7:
-			{
-				TC_disable_external_dir();
-				break;
-			}
-		case 8: {
-				app2ext_deinit(handle);
-				return 0;
-			}
+			disable_external_dir();
+			break;
+		case 8:
+			app2ext_deinit(handle);
+			printf("Exit!\n");
+			return 0;
 		default:
-			{
-				printf("\nInvalid test id\n");
-				break;
-			}
+			printf("\nInvalid test id\n");
+			break;
 		}
 	} while(1);
+
 	app2ext_deinit(handle);
+
 	return 0;
 }
