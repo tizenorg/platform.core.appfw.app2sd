@@ -34,8 +34,6 @@
 #include <dlog.h>
 #include <time.h>
 #include <db-util.h>
-
-/* For multi-user support */
 #include <tzplatform_config.h>
 
 #define MAX_QUERY_LEN 4096
@@ -129,8 +127,8 @@ int _app2sd_set_password_in_db(const char *pkgid,
 }
 
 /*
- *@_app2sd_remove_password_from_db
- *This function is to remove passwod from  db.
+ * @_app2sd_remove_password_from_db
+ * This function is to remove passwod from  db.
  * param[in]: pkgid: package id
  * return: On success, it will return 0.
  * Else appropriate error will be returned.
@@ -138,14 +136,14 @@ int _app2sd_set_password_in_db(const char *pkgid,
 int _app2sd_remove_password_from_db(const char *pkgid)
 {
 	char *error_message = NULL;
-
-	char *query = sqlite3_mprintf("delete from app2sd where pkgid LIKE %Q", pkgid);
+	char *query = sqlite3_mprintf("delete from app2sd"
+		" where pkgid LIKE %Q", pkgid);
 	app2ext_print("\n deletion querys is %s ", query);
 
 	if (SQLITE_OK != sqlite3_exec(app2sd_db, query, NULL,
-				      NULL, &error_message)) {
-		app2ext_print("Don't execute query = %s, error message = %s\n",
-			     query, error_message);
+		NULL, &error_message)) {
+		app2ext_print("Don't execute query = %s, "
+			"error message = %s\n", query, error_message);
 		sqlite3_free(query);
 		return APP2EXT_ERROR_SQLITE_REGISTRY;
 	}
@@ -153,12 +151,11 @@ int _app2sd_remove_password_from_db(const char *pkgid)
 	sqlite3_free(query);
 	app2ext_print("\n app2sd password deletion done ");
 	return APP2EXT_SUCCESS;
-
 }
 
 /*
- *@_app2sd_get_password_from_db
- *This function is to retrive password from DB
+ * @_app2sd_get_password_from_db
+ * This function is to retrive password from DB
  * param[in]: pkgid: package id
  * return: On success, it will return the password, else NULL.
  */
@@ -171,11 +168,11 @@ char *_app2sd_get_password_from_db(const char *pkgid)
 	char *passwd = NULL;
 
 	sqlite3_snprintf(MAX_QUERY_LEN, query,
-		 "select * from app2sd where pkgid LIKE '%s'", pkgid);
-	app2ext_print("\n access querys is %s ", query);
+		"select * from app2sd where pkgid LIKE '%s'", pkgid);
+	app2ext_print("access querys is %s ", query);
 
 	if (SQLITE_OK != sqlite3_prepare(app2sd_db, query,
-					 strlen(query), &stmt, &tail)) {
+		strlen(query), &stmt, &tail)) {
 		app2ext_print("sqlite3_prepare error\n");
 		return NULL;
 	}
@@ -191,26 +188,29 @@ char *_app2sd_get_password_from_db(const char *pkgid)
 		goto FINISH_OFF;
 	}
 
-	app2ext_print("\n entry available in sqlite");
+	app2ext_print("entry available in sqlite");
 	strncpy(passwd, (const char*)sqlite3_column_text(stmt, 1),
 		PASSWORD_LENGTH);
 	if (passwd == NULL) {
 		app2ext_print("\n password is NULL ");
 		goto FINISH_OFF;
 	}
-	app2ext_print("\n passwd is %s ", passwd);
+	app2ext_print("passwd is %s ", passwd);
 	if (SQLITE_OK != sqlite3_finalize(stmt)) {
 		app2ext_print("error : sqlite3_finalize\n");
 		goto FINISH_OFF;
 	}
+
 	return passwd;
 
 FINISH_OFF:
 	rc = sqlite3_finalize(stmt);
 	if (rc != SQLITE_OK) {
-		app2ext_print(" sqlite3_finalize failed - %d", rc);
+		app2ext_print("sqlite3_finalize failed - %d", rc);
 	}
+
 	if (passwd)
 		free(passwd);
+
 	return NULL;
 }
