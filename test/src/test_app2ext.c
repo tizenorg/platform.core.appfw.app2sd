@@ -27,15 +27,19 @@
 #include <errno.h>
 #include <sys/wait.h>
 #include <sys/types.h>
+#include <aul.h>
+#include <tzplatform_config.h>
 #include <app2ext_interface.h>
 
 #define SUCCESS 0
 #define FAIL 1
 #define CMD_LEN 256
+#define OWNER_ROOT 0
+#define GLOBAL_USER tzplatform_getuid(TZ_SYS_GLOBALAPP_USER)
+#define TEST_PKGNAME "org.example.basicuiapplication"
+#define TEST_PKGNAME_PATH "/tmp/org.example.basicuiapplication-1.0.0-arm.tpk"
 
 app2ext_handle *handle = NULL;
-
-#define TEST_PKGNAME "org.example.basicuiapplication"
 
 char pkg_ro_content_rpm[3][5] = { "bin", "res", "lib" };
 
@@ -122,57 +126,11 @@ static void usage(void)
 	printf("<8> exit\n");
 }
 
-GList * populate_dir_details()
-{
-	GList *dir_list = NULL;
-	GList *list = NULL;
-	app2ext_dir_details* dir_detail = NULL;
-	int i;
-
-
-	for (i=0; i<3; i++) {
-		dir_detail = (app2ext_dir_details*) calloc(1, sizeof(app2ext_dir_details));
-		if (dir_detail == NULL) {
-			printf("\nMemory allocation failed\n");
-			goto FINISH_OFF;
-		}
-		dir_detail->name = (char*) calloc(1, sizeof(char)*(strlen(pkg_ro_content_rpm[i])+2));
-		if (dir_detail->name == NULL) {
-			printf("\nMemory allocation failed\n");
-			free(dir_detail);
-			goto FINISH_OFF;
-		}
-		snprintf(dir_detail->name, (strlen(pkg_ro_content_rpm[i])+1), "%s", pkg_ro_content_rpm[i]);
-		dir_detail->type = APP2EXT_DIR_RO;
-		dir_list = g_list_append(dir_list, dir_detail);
-	}
-	if (dir_list) {
-		list = g_list_first(dir_list);
-		while (list) {
-			dir_detail = (app2ext_dir_details *)list->data;
-			list = g_list_next(list);
-		}
-	}
-	return dir_list;
-FINISH_OFF:
-	if (dir_list) {
-		list = g_list_first(dir_list);
-		while (list) {
-			dir_detail = (app2ext_dir_details *)list->data;
-			if (dir_detail && dir_detail->name) {
-				free(dir_detail->name);
-			}
-			list = g_list_next(list);
-		}
-		g_list_free(dir_list);
-	}
-	return NULL;
-}
-
 void clear_dir_list(GList* dir_list)
 {
 	GList *list = NULL;
 	app2ext_dir_details* dir_detail = NULL;
+
 	if (dir_list) {
 		list = g_list_first(dir_list);
 		while (list) {
@@ -184,6 +142,117 @@ void clear_dir_list(GList* dir_list)
 		}
 		g_list_free(dir_list);
 	}
+}
+
+GList * populate_dir_details()
+{
+	GList *dir_list = NULL;
+	GList *list = NULL;
+	app2ext_dir_details *dir_detail = NULL;
+	int i;
+
+	for (i = 0; i < 3; i++) {
+		dir_detail = (app2ext_dir_details*)calloc(1, sizeof(app2ext_dir_details));
+		if (dir_detail == NULL) {
+			printf("memory allocation failed\n");
+			goto FINISH_OFF;
+		}
+
+		dir_detail->name = (char*)calloc(1, sizeof(char) * (strlen(pkg_ro_content_rpm[i]) + 2));
+		if (dir_detail->name == NULL) {
+			printf("memory allocation failed\n");
+			free(dir_detail);
+			goto FINISH_OFF;
+		}
+		snprintf(dir_detail->name, (strlen(pkg_ro_content_rpm[i]) + 1), "%s", pkg_ro_content_rpm[i]);
+		dir_detail->type = APP2EXT_DIR_RO;
+		dir_list = g_list_append(dir_list, dir_detail);
+	}
+
+	if (dir_list) {
+		list = g_list_first(dir_list);
+		while (list) {
+			dir_detail = (app2ext_dir_details *)list->data;
+			list = g_list_next(list);
+		}
+	}
+
+	return dir_list;
+
+FINISH_OFF:
+
+	clear_dir_list(dir_list);
+
+	return NULL;
+}
+
+int app_install_client()
+{
+	GList *dir_list = NULL;
+	int ret = -1;
+
+	//printf("app_install_client : path(%s)\n", TEST_PKGNAME_PATH);
+
+	//char cmd_install[CMD_LEN + 1];
+	//snprintf(cmd_install, CMD_LEN, "tpk-backend -i %s", TEST_PKGNAME_PATH);
+
+	dir_list = populate_dir_details();
+	if (dir_list == NULL) {
+		printf("Error in populating the directory list\n");
+		return -1;
+	}
+
+	/* size : in MB */
+	ret = handle->interface.client_pre_install(TEST_PKGNAME,
+		dir_list, 20);
+	if (ret) {
+		printf("pre_install failed(%s)\n", error_list[ret]);
+		clear_dir_list(dir_list);
+		return -1;
+	}
+
+	//printf("cmd_install(%s)\n", cmd_install);
+	//ret = system(cmd_install);
+	/*
+	if (ret) {
+		printf("install command failed(%d)\n", ret);
+
+		ret = handle->interface.post_install(TEST_PKGNAME,
+			APP2EXT_STATUS_FAILED);
+		if (ret) {
+			printf("post_install failed(%s)\n", error_list[ret]);
+		}
+
+		clear_dir_list(dir_list);
+		return -1;
+	}
+	*/
+
+	ret = handle->interface.client_post_install(TEST_PKGNAME,
+		APP2EXT_STATUS_SUCCESS);
+	if (ret) {
+		printf("post_install failed(%s)\n", error_list[ret]);
+		clear_dir_list(dir_list);
+		return -1;
+	}
+
+	ret = handle->interface.enable(TEST_PKGNAME);
+	if (ret) {
+		printf("enable failed(%s)\n", error_list[ret]);
+		clear_dir_list(dir_list);
+		return -1;
+	}
+
+	ret = handle->interface.disable(TEST_PKGNAME);
+	if (ret < 0 || ret > 44) {
+		printf("disable failed : unknown error\n");
+	} else {
+		printf("disable return(%s)\n", error_list[ret]);
+	}
+
+	clear_dir_list(dir_list);
+
+	return ret;
 }
 
 int app_install()
@@ -200,6 +269,7 @@ int app_install()
 		printf("Error in populating the directory list\n");
 		return -1;
 	}
+
 	ret = handle->interface.pre_install(TEST_PKGNAME, dir_list, 20);
 	if (ret) {
 		printf("pre_install failed(%s)\n", error_list[ret]);
@@ -438,8 +508,14 @@ void disable_external_dir()
 int main(int argc, char **argv)
 {
 	int ret = 0;
+	uid_t uid = getuid();
 
-	/* check authorized user */
+	/* check user */
+	if (uid == OWNER_ROOT || uid == GLOBAL_USER) {
+		printf("test for global app\n");
+	} else {
+		printf("test for user(%d) app\n", uid);
+	}
 
 	handle = app2ext_init(APP2EXT_SD_CARD);
 	if (handle == NULL) {
@@ -475,6 +551,9 @@ int main(int argc, char **argv)
 			disable_external_dir();
 			break;
 		case 8:
+			app_install_client();
+			break;
+		case 20:
 			app2ext_deinit(handle);
 			printf("Exit!\n");
 			return 0;

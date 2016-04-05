@@ -26,13 +26,135 @@
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <glib.h>
+#include <gio/gio.h>
 #include <pkgmgr-info.h>
-#include <vconf.h>
 
-#define MAX_BUF_LEN	1024
+static int app2sd_gdbus_shared_connection(GDBusConnection **connection)
+{
+	GError *error = NULL;
 
-int app2sd_pre_app_install(const char *pkgid, GList* dir_list,
-				int size)
+#if (GLIB_MAJOR_VERSION <= 2 && GLIB_MINOR_VERSION < 36)
+	g_type_init();
+#endif
+
+	*connection = g_bus_get_sync(G_BUS_TYPE_SYSTEM, NULL, &error);
+	if (*connection == NULL) {
+		if (error != NULL) {
+			_E("app2sd error : failed to get "
+				"system dbus [%s]\n", error->message);
+			g_error_free(error);
+		}
+		return APP2EXT_ERROR_DBUS_FAILED;
+	}
+
+	return APP2EXT_SUCCESS;
+}
+
+static int __app2sd_call_server_method(const gchar *method_name,
+		GVariant *param)
+{
+	int ret = APP2EXT_SUCCESS;
+	int result = 0;
+	GDBusConnection *conn = NULL;
+	GDBusProxy *proxy = NULL;
+	GError *error = NULL;
+	GVariant *value = NULL;
+
+	/* get gdbus connection */
+	ret = app2sd_gdbus_shared_connection(&conn);
+	if (ret) {
+		_E("app2sd error : dbus connection error");
+		return ret;
+	}
+
+	/* method call */
+	proxy = g_dbus_proxy_new_sync(conn,
+		G_DBUS_PROXY_FLAGS_NONE, NULL,
+		APP2SD_BUS_NAME, APP2SD_OBJECT_PATH, APP2SD_INTERFACE_NAME,
+		NULL, &error);
+	if (proxy == NULL) {
+		_E("failed to create new proxy, error(%s)", error->message);
+		g_error_free(error);
+		ret = APP2EXT_ERROR_DBUS_FAILED;
+		goto out;
+	}
+
+	value = g_dbus_proxy_call_sync(proxy, method_name, param,
+		G_DBUS_CALL_FLAGS_NONE, -1, NULL, &error);
+	if (error != NULL) {
+		_E("proxy call sync error(%s)", error->message);
+		g_error_free(error);
+		ret = APP2EXT_ERROR_DBUS_FAILED;
+		goto out;
+	}
+
+	g_variant_get(value, "(i)", &result);
+	g_variant_unref(value);
+
+	_D("result(%d)", result);
+	if (result)
+		ret = result;
+
+out:
+	if (conn)
+		g_object_unref(conn);
+
+	return ret;
+}
+
+static void __app2sd_create_dir_list_builder(gpointer data, gpointer user_data)
+{
+	app2ext_dir_details *item = (app2ext_dir_details *)data;
+	GVariantBuilder *builder = (GVariantBuilder *)user_data;
+
+	g_variant_builder_add(builder, "(si)", item->name, item->type);
+}
+
+int app2sd_client_pre_app_install(const char *pkgid, GList* dir_list, int size)
+{
+	int ret = 0;
+	GVariantBuilder *builder = NULL;
+	GVariant *param = NULL;
+
+	/* validate the function parameter recieved */
+	if (pkgid == NULL || dir_list == NULL || size <= 0) {
+		_E("invalid function arguments");
+		return APP2EXT_ERROR_INVALID_ARGUMENTS;
+	}
+
+	builder = g_variant_builder_new(G_VARIANT_TYPE("a(si)"));
+	g_list_foreach(dir_list, __app2sd_create_dir_list_builder, builder);
+
+	param = g_variant_new("(sia(si))", pkgid, size, builder);
+	ret = __app2sd_call_server_method("PreAppInstall", param);
+	
+	if (builder)
+		g_variant_builder_unref(builder);
+
+	return ret;
+}
+
+int app2sd_client_post_app_install(const char *pkgid,
+		app2ext_status install_status)
+{
+	int ret = 0;
+	GVariant *param = NULL;
+
+	/* validate the function parameter recieved */
+	if (pkgid == NULL || install_status < APP2EXT_STATUS_FAILED
+		|| install_status > APP2EXT_STATUS_SUCCESS) {
+		app2ext_print("Invalid func parameters\n");
+		return APP2EXT_ERROR_INVALID_ARGUMENTS;
+	}
+
+	param = g_variant_new("(si)", pkgid, install_status);
+	ret = __app2sd_call_server_method("PostAppInstall", param);
+	
+	return ret;
+}
+
+int app2sd_pre_app_install(const char *pkgid, GList* dir_list, int size)
 {
 	int ret = 0;
 	int free_mmc_mem = 0;
@@ -146,31 +268,34 @@ END:
 }
 
 int app2sd_post_app_install(const char *pkgid,
-			app2ext_status install_status)
+		app2ext_status install_status)
 {
 	char *device_name = NULL;
 	char buf_dir[FILENAME_MAX] = { 0, };
 	int ret = APP2EXT_SUCCESS;
-	/*Validate the function parameter recieved */
+
+	/* validate the function parameter recieved */
 	if (pkgid == NULL || install_status < APP2EXT_STATUS_FAILED
 		|| install_status > APP2EXT_STATUS_SUCCESS) {
 		app2ext_print("Invalid func parameters\n");
 		return APP2EXT_ERROR_INVALID_ARGUMENTS;
 	}
 
-	/*Check whether MMC is present or not */
+	/* check whether MMC is present or not */
 	ret = _app2sd_check_mmc_status();
 	if (ret) {
-		app2ext_print("App2Sd Error : MMC not preset OR Not ready %d\n",
-			     ret);
+		app2ext_print("App2Sd Error : MMC not present OR "
+			"Not ready %d\n", ret);
 		return APP2EXT_ERROR_MMC_STATUS;
 	}
-	sync();	//2
-	/*Get the associated device node for SD card applicationer */
+	sync();
+
+	/* get the associated device node for SD card applicationer */
 	device_name = _app2sd_find_associated_device_node(pkgid);
 	if (NULL == device_name) {
 		return APP2EXT_ERROR_FIND_ASSOCIATED_DEVICE_NODE;
 	}
+
 	ret = _app2sd_unmount_app_content(pkgid);
 	if (ret) {
 		if (device_name) {
@@ -180,56 +305,60 @@ int app2sd_post_app_install(const char *pkgid,
 		app2ext_print("Unable to unmount the app content %d\n", ret);
 		return APP2EXT_ERROR_UNMOUNT;
 	}
+
 	ret = _app2sd_remove_loopback_encryption_setup(pkgid);
 	if (ret) {
 		if (device_name) {
 			free(device_name);
 			device_name = NULL;
 		}
-		app2ext_print
-		    ("Unable to Detach the loopback encryption setup for the application");
+		app2ext_print("Unable to Detach the loopback encryption setup"
+			" for the application");
 		return APP2EXT_ERROR_UNMOUNT;
 	}
+
 	if (device_name) {
 		free(device_name);
 		device_name = NULL;
 	}
 
-	/*Take appropriate action based on installation
-	status of application package */
+	/* take appropriate action based on
+	 * installation status of application package
+	 */
 	if (install_status == APP2EXT_STATUS_FAILED) {
-		/*Delete the loopback device from the SD card */
+		/* delete the loopback device from the SD card */
 		ret = _app2sd_delete_loopback_device(pkgid);
 		if (ret) {
-			app2ext_print
-			    ("App2Sd Error : Unable to delete the loopback device from the SD Card\n");
+			app2ext_print("App2Sd Error : Unable to delete "
+				"the loopback device from the SD Card\n");
 			return APP2EXT_ERROR_DELETE_LOOPBACK_DEVICE;
 		}
 		ret = _app2sd_remove_password_from_db(pkgid);
 
-		if (ret) {
-			app2ext_print
-			    ("App2Sd Error : Unable to delete the password\n");
-		}
+		if (ret)
+			app2ext_print("App2Sd Error : Unable to delete "
+				"the password\n");
 
-		snprintf(buf_dir, FILENAME_MAX, "%s%s", APP_INSTALLATION_PATH, pkgid);
+		snprintf(buf_dir, FILENAME_MAX, "%s%s", APP_INSTALLATION_PATH,
+			pkgid);
 
 		ret = _app2sd_delete_directory(buf_dir);
 
-		if (ret) {
-			app2ext_print
-			    ("App2Sd Error : Unable to delete the directory %s\n",
-			     buf_dir);
-		}
-
+		if (ret)
+			app2ext_print("App2Sd Error : Unable to delete "
+				"the directory %s\n", buf_dir);
 	} else {
-		/*If the status is success, then update installed storage to pkgmgr_parser db*/
+		/* if the status is success, then update installed storage
+		 * to pkgmgr_parser db
+		 */
 		int rt = 0;
-		rt = pkgmgrinfo_pkginfo_set_installed_storage(pkgid, INSTALL_EXTERNAL);
-		if (rt < 0) {
-			app2ext_print("fail to update installed location to db[%s, %d]\n", pkgid, INSTALL_EXTERNAL);
-		}
+		rt = pkgmgrinfo_pkginfo_set_installed_storage(pkgid,
+			INSTALL_EXTERNAL);
+		if (rt < 0)
+			app2ext_print("fail to update installed location "
+				"to db[%s, %d]\n", pkgid, INSTALL_EXTERNAL);
 	}
+
 	return ret;
 }
 
@@ -241,14 +370,14 @@ int app2sd_on_demand_setup_init(const char *pkgid)
 	char *result = NULL;
 	FILE *fp = NULL;
 
-	/*Validate the function parameter recieved */
+	/* validate the function parameter recieved */
 	if (pkgid == NULL) {
 		app2ext_print
 		    ("App2Sd Error : Invalid function arguments to app launch setup\n");
 		return APP2EXT_ERROR_INVALID_ARGUMENTS;
 	}
 
-	/*Check whether MMC is present or not */
+	/* check whether MMC is present or not */
 	ret = _app2sd_check_mmc_status();
 	if (ret) {
 		app2ext_print("App2Sd Error : MMC not preset OR Not ready %d\n",
@@ -256,7 +385,7 @@ int app2sd_on_demand_setup_init(const char *pkgid)
 		return APP2EXT_ERROR_MMC_STATUS;
 	}
 
-	/*check app entry is there in sd card or not. */
+	/* check app entry is there in sd card or not. */
 	snprintf(app_path, FILENAME_MAX, "%s%s", APP2SD_PATH,
 		 pkgid);
 	fp = fopen(app_path, "r+");
@@ -266,8 +395,9 @@ int app2sd_on_demand_setup_init(const char *pkgid)
 		return APP2EXT_ERROR_INVALID_PACKAGE;
 	}
 	fclose(fp);
+
 	result = (char *)_app2sd_find_associated_device(app_path);
-	/*process the string */
+	/* process the string */
 	if ((result!=NULL) && strstr(result, "/dev") != NULL) {
 		app2ext_print("App2SD Error! Already associated\n");
 		free(result);
@@ -275,7 +405,7 @@ int app2sd_on_demand_setup_init(const char *pkgid)
 		return APP2EXT_ERROR_ALREADY_MOUNTED;
 	}
 
-	/*Do loopback setup */
+	/* do loopback setup */
 	device_node = _app2sd_do_loopback_encryption_setup(pkgid);
 	if (device_node == NULL) {
 		app2ext_print
@@ -283,7 +413,7 @@ int app2sd_on_demand_setup_init(const char *pkgid)
 		return APP2EXT_ERROR_DO_LOSETUP;
 	}
 
-	/*Do  mounting */
+	/* do mounting */
 	ret =
 	    _app2sd_mount_app_content(pkgid, device_node, MOUNT_TYPE_RD,
 				NULL, APP2SD_APP_LAUNCH);
@@ -295,10 +425,12 @@ int app2sd_on_demand_setup_init(const char *pkgid)
 		}
 		return APP2EXT_ERROR_MOUNT_PATH;
 	}
+
 	if (device_node) {
 		free(device_node);
 		device_node = NULL;
 	}
+
 	return ret;
 }
 
@@ -308,21 +440,22 @@ int app2sd_on_demand_setup_exit(const char *pkgid)
 	char app_path[FILENAME_MAX] = { 0, };
 	FILE *fp = NULL;
 
-	/*Validate the function parameter recieved */
+	/* validate the function parameter recieved */
 	if (pkgid == NULL) {
 		app2ext_print
 		    ("App2Sd Error : Invalid function arguments to app launch setup\n");
 		return APP2EXT_ERROR_INVALID_ARGUMENTS;
 	}
 
-	/*Check whether MMC is present or not */
+	/* check whether MMC is present or not */
 	ret = _app2sd_check_mmc_status();
 	if (ret) {
 		app2ext_print("App2Sd Error : MMC not preset OR Not ready %d\n",
 			     ret);
 		return APP2EXT_ERROR_MMC_STATUS;
 	}
-	/*check app entry is there in sd card or not. */
+
+	/* check app entry is there in sd card or not. */
 	snprintf(app_path, FILENAME_MAX, "%s%s", APP2SD_PATH,
 		 pkgid);
 	fp = fopen(app_path, "r+");
@@ -332,17 +465,20 @@ int app2sd_on_demand_setup_exit(const char *pkgid)
 		return APP2EXT_ERROR_INVALID_PACKAGE;
 	}
 	fclose(fp);
+
 	ret = _app2sd_unmount_app_content(pkgid);
 	if (ret) {
 		app2ext_print
 		    ("App2SD Error: Unable to unmount the SD application\n");
 		return APP2EXT_ERROR_UNMOUNT;
 	}
+
 	ret = _app2sd_remove_loopback_encryption_setup(pkgid);
 	if (ret) {
 		app2ext_print("App2SD Error: Unable to remove loopback setup\n");
 		return APP2EXT_ERROR_DELETE_LOOPBACK_DEVICE;
 	}
+
 	return ret;
 }
 
@@ -848,21 +984,25 @@ int app2sd_force_clean(const char *pkgid)
 }
 
 /* This is the plug-in load function. The plugin has to bind its functions to function pointers of handle
-	@param[in/out]		st_interface 	Specifies the storage interface.
-*/
-void
-app2ext_on_load(app2ext_interface *st_interface)
+ * @param[in/out]	interface 	Specifies the storage interface.
+ */
+void app2ext_on_load(app2ext_interface *interface)
 {
-	/*Plug-in Binding.*/
-	st_interface->pre_install= app2sd_pre_app_install;
-	st_interface->post_install= app2sd_post_app_install;
-	st_interface->pre_uninstall= app2sd_pre_app_uninstall;
-	st_interface->post_uninstall= app2sd_post_app_uninstall;
-	st_interface->pre_upgrade= app2sd_pre_app_upgrade;
-	st_interface->post_upgrade= app2sd_post_app_upgrade;
-	st_interface->move= app2sd_move_installed_app;
-	st_interface->force_clean= app2sd_force_clean;
-	st_interface->enable= app2sd_on_demand_setup_init;
-	st_interface->disable= app2sd_on_demand_setup_exit;
+	/* Plug-in Binding.*/
+        /* TODO : remove */
+	interface->pre_install = app2sd_pre_app_install;
+	interface->post_install = app2sd_post_app_install;
+	interface->pre_uninstall = app2sd_pre_app_uninstall;
+	interface->post_uninstall = app2sd_post_app_uninstall;
+	interface->pre_upgrade = app2sd_pre_app_upgrade;
+	interface->post_upgrade = app2sd_post_app_upgrade;
+	interface->move = app2sd_move_installed_app;
+	interface->force_clean = app2sd_force_clean;
+	interface->enable = app2sd_on_demand_setup_init;
+	interface->disable = app2sd_on_demand_setup_exit;
+
+	/* client function */
+	interface->client_pre_install = app2sd_client_pre_app_install;
+	interface->client_post_install = app2sd_client_post_app_install;
 }
 
