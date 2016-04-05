@@ -62,18 +62,22 @@ extern "C" {
 #define LOG_TAG "APP2EXT"
 
 #ifdef _DEBUG_MODE_
-#define app2ext_print(fmt, arg...) LOGD(fmt,##arg)
+#define app2ext_print(fmt, arg...) LOGD(fmt, ##arg)
 #else
-#define app2ext_print(FMT, ARG...) SLOGD(FMT,##ARG);
+#define app2ext_print(FMT, ARG...) SLOGD(FMT, ##ARG);
 #endif
 
+#define _E(fmt, arg...) LOGE(fmt, ##arg)
+#define _D(fmt, arg...) LOGD(fmt, ##arg)
+#define _W(fmt, arg...) LOGW(fmt, ##arg)
+#define _I(fmt, arg...) LOGI(fmt, ##arg)
+
 #define APP2EXT_SUCCESS 0
-#define MMC_PATH tzplatform_mkpath(TZ_SYS_MEDIA, "sdcard")
-#define APP2SD_PATH tzplatform_mkpath(TZ_SYS_MEDIA, "sdcard/app2sd/")
-/* user app */
-#define APP_INSTALLATION_USER_PATH tzplatform_mkpath(TZ_USER_APP, "/")
-/* gloabl app */
-#define APP_INSTALLATION_PATH tzplatform_mkpath(TZ_SYS_RW_APP, "/")
+
+#define OWNER_ROOT 0
+#define GLOBAL_USER tzplatform_getuid(TZ_SYS_GLOBALAPP_USER)
+#define MMC_PATH tzplatform_mkpath(TZ_SYS_MEDIA, "SDCardA1")
+#define APP2SD_PATH tzplatform_mkpath(TZ_SYS_MEDIA, "SDCardA1/app2sd")
 
 /**
  * Enum for application installation location
@@ -157,7 +161,10 @@ typedef enum app2ext_error_t {
 	APP2EXT_ERROR_DETACH_LOOPBACK_DEVICE,
 	APP2EXT_ERROR_ALREADY_MOUNTED,
 	APP2EXT_ERROR_PLUGIN_INIT_FAILED,
-	APP2EXT_ERROR_PLUGIN_DEINIT_FAILED
+	APP2EXT_ERROR_PLUGIN_DEINIT_FAILED,
+	APP2EXT_ERROR_DBUS_FAILED,
+	APP2EXT_ERROR_MEMORY_ALLOC_FAILED,
+	APP2EXT_ERROR_OPERATION_NOT_PERMITTED
 } app2ext_error;
 
 /**
@@ -177,7 +184,10 @@ typedef enum app2ext_error_t {
  * @param[in]	size		Size of the application
  * @return 	0 if success,  error code(>0) if fail
  */
-typedef int (*app2ext_pre_install)(const char *appname, GList* dir_list, int size);
+typedef int (*app2ext_usr_pre_install)(const char *appname, GList* dir_list,
+		int size, uid_t uid);
+typedef int (*app2ext_client_usr_pre_install)(const char *appname, GList* dir_list,
+		int size, uid_t uid);
 
 /**
  * @brief :This function type is for a function that is implemented by plugin
@@ -189,7 +199,10 @@ typedef int (*app2ext_pre_install)(const char *appname, GList* dir_list, int siz
  *					APP2EXT_STATUS_FAILED]
  * @return 	0 if success,  error code(>0) if fail
  */
-typedef int (*app2ext_post_install)(const char *appname, app2ext_status install_status);
+typedef int (*app2ext_usr_post_install)(const char *appname,
+		app2ext_status install_status, uid_t uid);
+typedef int (*app2ext_client_usr_post_install)(const char *appname,
+		app2ext_status install_status, uid_t uid);
 
 /**
  * @brief :This function type is for a function that is implemented by plugin
@@ -208,7 +221,10 @@ typedef int (*app2ext_post_install)(const char *appname, app2ext_status install_
  * @param[in]	size		Size of the application
  * @return 	0 if success,  error code(>0) if fail
  */
-typedef int (*app2ext_pre_upgrade)(const char *appname, GList* dir_list, int size);
+typedef int (*app2ext_usr_pre_upgrade)(const char *appname, GList* dir_list,
+		int size, uid_t uid);
+typedef int (*app2ext_client_usr_pre_upgrade)(const char *appname, GList* dir_list,
+		int size, uid_t uid);
 
 /**
  * @brief :This function type is for a function that is implemented by plugin
@@ -220,7 +236,10 @@ typedef int (*app2ext_pre_upgrade)(const char *appname, GList* dir_list, int siz
  *					APP2EXT_STATUS_FAILED]
  * @return 	0 if success,  error code(>0) if fail
  */
-typedef int (*app2ext_post_upgrade)(const char *appname, app2ext_status upgrade_status);
+typedef int (*app2ext_usr_post_upgrade)(const char *appname,
+		app2ext_status upgrade_status, uid_t uid);
+typedef int (*app2ext_client_usr_post_upgrade)(const char *appname,
+		app2ext_status upgrade_status, uid_t uid);
 
 /**
  * @brief :This function type is for a function that is implemented by plugin
@@ -229,7 +248,8 @@ typedef int (*app2ext_post_upgrade)(const char *appname, app2ext_status upgrade_
  * @param[in] 	appname		application package name which is to be uninstalled
  * @return 	0 if success,  error code(>0) if fail
  */
-typedef int (*app2ext_pre_uninstall)(const char *appname);
+typedef int (*app2ext_usr_pre_uninstall)(const char *appname, uid_t uid);
+typedef int (*app2ext_client_usr_pre_uninstall)(const char *appname, uid_t uid);
 
 /**
  * @brief :This function type is for a function that is implemented by plugin
@@ -238,7 +258,8 @@ typedef int (*app2ext_pre_uninstall)(const char *appname);
  * @param[in] 	appname		application package name which is to be uninstalled
  * @return 	0 if success,  error code(>0) if fail
  */
-typedef int (*app2ext_post_uninstall)(const char *appname);
+typedef int (*app2ext_usr_post_uninstall)(const char *appname, uid_t uid);
+typedef int (*app2ext_client_usr_post_uninstall)(const char *appname, uid_t uid);
 
 /**
  * @brief :This function type is for a function that is implemented by plugin
@@ -259,7 +280,10 @@ typedef int (*app2ext_post_uninstall)(const char *appname);
  *				[Enum: APP2EXT_MOVE_TO_EXT, APP2EXT_MOVE_TO_PHONE]
  * @return 	0 if success,  error code(>0) if fail
  */
-typedef int (*app2ext_move)(const char *appname, GList* dir_list, app2ext_move_type move_type);
+typedef int (*app2ext_usr_move)(const char *appname, GList* dir_list,
+		app2ext_move_type move_type, uid_t uid);
+typedef int (*app2ext_client_usr_move)(const char *appname, GList* dir_list,
+		app2ext_move_type move_type, uid_t uid);
 
 /**
  * @brief :This function type is for a function that is implemented by plugin
@@ -268,7 +292,8 @@ typedef int (*app2ext_move)(const char *appname, GList* dir_list, app2ext_move_t
  * @param[in] 	appname		application package name which is to be enabled
  * @return 	0 if success,  error code(>0) if fail
  */
-typedef int (*app2ext_enable)(const char *appname);
+typedef int (*app2ext_usr_enable)(const char *appname, uid_t uid);
+typedef int (*app2ext_client_usr_enable)(const char *appname, uid_t uid);
 
 /**
  * @brief :This function type is for a function that is implemented by plugin
@@ -277,7 +302,8 @@ typedef int (*app2ext_enable)(const char *appname);
  * @param[in] 	appname		application package name which is to be disabled
  * @return 	0 if success,  error code(>0) if fail
  */
-typedef int (*app2ext_disable)(const char *appname);
+typedef int (*app2ext_usr_disable)(const char *appname, uid_t uid);
+typedef int (*app2ext_client_usr_disable)(const char *appname, uid_t uid);
 
 /**
  * @brief :This function type is for a function that is implemented by plugin
@@ -286,32 +312,35 @@ typedef int (*app2ext_disable)(const char *appname);
  * @param[in] 	pkgid		application package name which is to be uninstalled
  * @return 	0 if success,  error code(>0) if fail
  */
-typedef int (*app2ext_force_clean)(const char *pkgid);
+typedef int (*app2ext_usr_force_clean)(const char *pkgid, uid_t uid);
+typedef int (*app2ext_client_usr_force_clean)(const char *pkgid, uid_t uid);
 
 /**
  * This structure defines the app2ext interfaces. Plugins have to implement these functions
  */
 typedef struct app2ext_interface_t{
-	app2ext_pre_install		pre_install;
-	app2ext_post_install		post_install;
-	app2ext_pre_upgrade		pre_upgrade;
-	app2ext_post_upgrade		post_upgrade;
-	app2ext_pre_uninstall		pre_uninstall;
-	app2ext_post_uninstall		post_uninstall;
-	app2ext_move			move;
-	app2ext_force_clean		force_clean;
-	app2ext_enable			enable;
-	app2ext_disable			disable;
+	/* for library function */
+	app2ext_client_usr_pre_install		client_usr_pre_install;
+	app2ext_client_usr_post_install		client_usr_post_install;
+	app2ext_client_usr_pre_upgrade		client_usr_pre_upgrade;
+	app2ext_client_usr_post_upgrade		client_usr_post_upgrade;
+	app2ext_client_usr_pre_uninstall	client_usr_pre_uninstall;
+	app2ext_client_usr_post_uninstall	client_usr_post_uninstall;
+	app2ext_client_usr_force_clean		client_usr_force_clean;
+	app2ext_client_usr_enable		client_usr_enable;
+	app2ext_client_usr_disable		client_usr_disable;
+	//app2ext_move			move;
 } app2ext_interface;
 
 /**
  * This structure defines app2ext handle .Each storage type maps to a different plugin
- * type				: storage type
- * plugin_handle			: plugin handle
+ * type			: storage type,
+ * plugin_handle	: plugin handle, need to close dlopen handle
+ * interface		: inteface with plugin library
  */
 typedef struct {
 	app2ext_install_location 	type;
-	void 			*plugin_handle;
+	void				*plugin_handle;
 	app2ext_interface 		interface;
 } app2ext_handle;
 
@@ -389,116 +418,54 @@ API app2ext_handle *app2ext_init(int storage_type);
 API int app2ext_deinit(app2ext_handle *handle);
 
 /**
- * @brief : This API returns the application location
- *			by refering to package manager DB
- *	    This should be called to know location of an application
- * @param[in] appname	name of the application
- * @return	APP2EXT_SD_CARD if app is in SD card,
+ * @brief : This API returns the application location by refering to package manager DB
+ *	This should be called to know location of an application package
+ * @param[in] pkgid	package id
+ * @param[in] uid	target user id of this instruction
+ * @return	APP2EXT_SD_CARD if pkg is in SD card,
  *		APP2EXT_INTERNAL_MEM if app is in internal memory
  *		error code(>0) if fail
  *@remarks see app2ext_install_location for more details
- @code
- #include <app2ext_interface.h>
-int ret = -1;
-
-ret = app2ext_get_app_location("com.samsung.calculator");
-if (ret == APP2EXT_SD_CARD) {
-	printf("\n app is in sd card ");
-} else if (ret == APP2EXT_INTERNAL_MEM) {
-	printf("\n app is in internal memory ");
-} else {
-	printf("\napp is not installed");
-}
- @endcode
  */
-API int app2ext_get_app_location(const char *appname);
+API int app2ext_usr_get_app_location(const char *pkgid, uid_t uid);
 
 /**
  * @brief : This API enable the package which is located in external memory
  * @param[in] pkgid	package id
+ * @param[in] uid	target user id of this instruction
  * @return	error < 0  if pkg enable fail ,
- @code
- #include <app2ext_interface.h>
-int ret = -1;
-
-ret = app2ext_enable_external_pkg("com.samsung.calculator");
-if (ret < 0) {
-	printf("\n pkg is not enabled ");
-} else {
-	printf("\n pkg is enabled ");
-}
- @endcode
  */
-API int app2ext_enable_external_pkg(const char *pkgid);
+API int app2ext_usr_enable_external_pkg(const char *pkgid, uid_t uid);
 
 /**
  * @brief : This API disable the package which is located in external memory
  * @param[in] pkgid	package id
+ * @param[in] uid	target user id of this instruction
  * @return	error < 0  if pkg enable fail ,
- @code
- #include <app2ext_interface.h>
-int ret = -1;
-
-ret = app2ext_disable_external_pkg("com.samsung.calculator");
-if (ret < 0) {
-	printf("\n pkg is not enabled ");
-} else {
-	printf("\n pkg is enabled ");
-}
- @endcode
  */
-API int app2ext_disable_external_pkg(const char *pkgid);
+API int app2ext_usr_disable_external_pkg(const char *pkgid, uid_t uid);
 
 /**
  * @brief : This API enable the directory which has package that is located in external memory
+ * @param[in] uid	target user id of this instruction
  * @return	error < 0  if pkg enable fail ,
- @code
- #include <app2ext_interface.h>
-int ret = -1;
-
-ret = app2ext_enable_external_dir();
-if (ret < 0) {
-	printf("\n app2sd dir is not enabled ");
-} else {
-	printf("\n app2sd dir is enabled ");
-}
- @endcode
  */
-API int app2ext_enable_external_dir(void);
+API int app2ext_usr_enable_external_dir(uid_t uid);
 
 /**
  * @brief : This API disable the directory which has package that is located in external memory
+ * @param[in] uid	target user id of this instruction
  * @return	error < 0  if pkg enable fail ,
- @code
- #include <app2ext_interface.h>
-int ret = -1;
-
-ret = app2ext_enable_external_dir();
-if (ret < 0) {
-	printf("\n app2sd dir is not enabled ");
-} else {
-	printf("\n app2sd dir is enabled ");
-}
- @endcode
  */
-API int app2ext_disable_external_dir(void);
+API int app2ext_usr_disable_external_dir(uid_t uid);
 
 /**
  * @brief : This API clean the directory and symbolic link which are made by app2ext
+ * @param[in] pkgid	package id
+ * @param[in] uid	target user id of this instruction
  * @return	error < 0  if pkg enable fail ,
- @code
- #include <app2ext_interface.h>
-int ret = -1;
-
-ret = app2ext_force_clean_pkg("docomo6002");
-if (ret < 0) {
-	printf("\n force_clean fail  ");
-} else {
-	printf("\n force_clean success");
-}
- @endcode
  */
-API int app2ext_force_clean_pkg(const char *pkgid);
+API int app2ext_usr_force_clean_pkg(const char *pkgid, uid_t uid);
 
 #ifdef __cplusplus
 }
