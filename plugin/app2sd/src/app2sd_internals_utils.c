@@ -37,7 +37,7 @@
 #include <sys/statvfs.h>
 #include <errno.h>
 
-#define	PASSWD_LEN		8
+#define	PASSWD_LEN		21
 #define	ASCII_PASSWD_CHAR	93
 
 /*
@@ -86,9 +86,10 @@ int _xsystem(const char *argv[])
 
 
 /*
-* @_app2sd_check_mmc_status
-* This function checks and returns MMC status
-*/
+ * @_app2sd_check_mmc_status
+ * This function checks and returns MMC status
+ */
+/* TODO : another possible way ? */
 int _app2sd_check_mmc_status(void)
 {
 	FILE *fp1 = NULL;
@@ -123,18 +124,23 @@ int _app2sd_get_available_free_memory(const char *sd_path, int *free_mem)
 	struct statvfs buf;
 	int ret = 0;
 	unsigned long long temp = 0;
+
 	if (sd_path == NULL || free_mem == NULL) {
-		app2ext_print("App2Sd Error : Invalid input parameter\n");
+		app2ext_print("app2sd error : invalid input parameter\n");
 		return -1;
 	}
+
 	memset((void *)&buf, '\0', sizeof(struct statvfs));
+
 	ret = statvfs(sd_path, &buf);
 	if (ret) {
-		app2ext_print("App2SD Error: Unable to get SD Card memory information\n");
+		app2ext_print("app2sD error: unable to get SD Card memory information\n");
 		return APP2EXT_ERROR_MMC_INFORMATION;
 	}
+
 	temp = (unsigned long long)buf.f_bsize*buf.f_bavail;
 	*free_mem = (int)(temp/(1024*1024));
+
 	return 0;
 }
 
@@ -319,7 +325,7 @@ char *_app2sd_encrypt_device(const char *device, const char *pkgid,
 			      char *passwd)
 {
 	const char *argv[] =
-	    { "/sbin/losetup", "-e", "aes", device, pkgid, "-k", passwd, NULL };
+	    { "/sbin/losetup", device, pkgid, NULL };
 	pid_t pid = 0;
 	int my_pipe[2] = { 0, };
 	char buf[FILENAME_MAX] = { 0, };
@@ -443,7 +449,7 @@ char *_app2sd_detach_loop_device(const char *device)
 /* Note: Don't use any printf statement inside this function*/
 char *_app2sd_find_associated_device(const char *mmc_app_path)
 {
-	const char *argv[] = { "/sbin/losetup", "-j", mmc_app_path, NULL };
+	const char *argv[] = { "/sbin/losetup", "-a", NULL };
 	pid_t pid;
 	int my_pipe[2] = { 0, };
 	char buf[FILENAME_MAX] = { 0, };

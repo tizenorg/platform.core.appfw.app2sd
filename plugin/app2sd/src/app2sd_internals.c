@@ -39,7 +39,6 @@
 #include <fcntl.h>
 #include <time.h>
 #include <dlog.h>
-#include <privilege-control.h>
 #include <sys/statvfs.h>
 
 extern int app2sd_force_clean(const char *pkgid);
@@ -138,7 +137,7 @@ char *_app2sd_find_associated_device_node(const char *pkgid)
 	/* process the string*/
 	app2ext_print("result = (%s)\n", result);
 	snprintf(dev, FILENAME_MAX-1, "%s", result);
-	if (strstr(dev, "/dev") == NULL) {
+	if (strstr(dev, "dev") == NULL) {
 		app2ext_print("App2SD Error! Unable to find the associated File\n");
 
 		free(result);
@@ -163,6 +162,7 @@ char *_app2sd_create_loopdevice_node(void)
 	FILE *fp = NULL;
 
 	result = (char *)_app2sd_find_free_device();
+	app2ext_print("find_free_device(%s)", result);
 	/* validate the result */
 	if (result == NULL || strstr(result, "/dev") == NULL) {
 		app2ext_print("No device found, creating device node...\n");
@@ -234,7 +234,7 @@ char *_app2sd_do_loopback_encryption_setup(const char *pkgid)
 	/* Get password for loopback encryption */
 	ret = _app2sd_initialize_db();
 	if (ret) {
-		app2ext_print("\n app2sd db initialize failed");
+		app2ext_print("app2sd db initialize failed");
 		return NULL;
 	}
 	if ((passwd = _app2sd_get_password_from_db(pkgid)) == NULL) {
@@ -265,6 +265,9 @@ char *_app2sd_do_loopback_encryption_setup(const char *pkgid)
 		    ("App2Sd Error: Unable to find free loopback node\n");
 		return NULL;
 	}
+	app2ext_print("device_node (%s)", device_node);
+	app2ext_print("app_path (%s)", app_path);
+	app2ext_print("passwd (%s)", passwd);
 	result = (char *)_app2sd_encrypt_device(device_node, app_path, passwd);
 	if (result == NULL) {
 		app2ext_print("App2Sd Error: Encryption failed!\n\n");
@@ -272,6 +275,7 @@ char *_app2sd_do_loopback_encryption_setup(const char *pkgid)
 		passwd = NULL;
 		return NULL;
 	} else {
+		app2ext_print("result (%s)", result);
 		free(result);
 		result = NULL;
 		free(passwd);
@@ -432,8 +436,7 @@ int _app2sd_create_loopback_device(const char *pkgid, int size)
 	ret = mkdir(external_storage_path, mode);
 	if (ret) {
 		if (errno != EEXIST) {
-			app2ext_print
-			    ("App2sd Error : Create directory failed, error no is %d\n",
+			app2ext_print("App2sd Error : Create directory failed, error no is %d\n",
 			     errno);
 			return APP2EXT_ERROR_CREATE_DIRECTORY;
 		}
@@ -801,6 +804,10 @@ int _app2sd_move_app_to_external(const char *pkgid, GList* dir_list)
 		}
 	}
 
+	app2ext_print("mmc_path(%s)", mmc_path);
+	app2ext_print("app_mmc_path(%s)", app_mmc_path);
+	app2ext_print("app_archive_path(%s)", app_archive_path);
+
 	list = g_list_first(dir_list);
 	while (list) {
 		dir_detail = (app2ext_dir_details *)list->data;
@@ -812,6 +819,7 @@ int _app2sd_move_app_to_external(const char *pkgid, GList* dir_list)
 				 "%s%s/%s",APP_INSTALLATION_PATH,
 				 pkgid,
 				 dir_detail->name);
+			app2ext_print("app_path(%s)", app_path);
 			total_size +=
 			    _app2sd_calculate_dir_size
 			    (app_path);
@@ -823,9 +831,7 @@ int _app2sd_move_app_to_external(const char *pkgid, GList* dir_list)
 	reqd_disk_size = reqd_size + ceil(reqd_size * 0.2);
 
 	/* Find avialable free memory in the MMC card */
-	ret =
-	    _app2sd_get_available_free_memory
-	    (MMC_PATH, &free_mmc_mem);
+	ret = _app2sd_get_available_free_memory(MMC_PATH, &free_mmc_mem);
 	if (ret) {
 		app2ext_print
 		    ("App2Sd Error : Unable to get available free memory in MMC %d\n",
@@ -840,26 +846,22 @@ int _app2sd_move_app_to_external(const char *pkgid, GList* dir_list)
 		return APP2EXT_ERROR_MMC_INSUFFICIENT_MEMORY;
 	}
 	/* Create a loopback device */
-	ret =
-	    _app2sd_create_loopback_device(pkgid, (reqd_disk_size+PKG_BUF_SIZE));
+	ret = _app2sd_create_loopback_device(pkgid, (reqd_disk_size + PKG_BUF_SIZE));
 	if (ret) {
-		app2ext_print
-		    ("App2Sd Error : loopback node creation failed\n");
+		app2ext_print("App2Sd Error : loopback node creation failed\n");
 	}
 	/* Perform Loopback encryption setup */
-	device_node =
-	    _app2sd_do_loopback_encryption_setup(pkgid);
+	device_node = _app2sd_do_loopback_encryption_setup(pkgid);
 	if (!device_node) {
-		app2ext_print
-		    ("App2Sd Error : losetup failed, device node is %s\n",
+		app2ext_print("App2Sd Error : losetup failed, device node is %s\n",
 		     device_node);
 		return APP2EXT_ERROR_DO_LOSETUP;
 	}
+	app2ext_print("device_node (%s)", device_node);
 	/* Check whether loopback device is associated with device node or not */
 	devi = _app2sd_find_associated_device_node(pkgid);
 	if (devi == NULL) {
-		app2ext_print
-		    ("App2Sd Error :  _app2sd_find_associated_device_node  losetup failed\n");
+		app2ext_print("App2Sd Error :  _app2sd_find_associated_device_node  losetup failed\n");
 		return APP2EXT_ERROR_DO_LOSETUP;
 	} else {
 		free(devi);
@@ -1339,8 +1341,7 @@ int _app2sd_duplicate_device(const char *pkgid, GList* dir_list, char *dev_node,
 	char *result = NULL;
 
 	/* Create a new loopback device */
-	snprintf(temp_pkgid, FILENAME_MAX,
-		 "%s.new", pkgid);
+	snprintf(temp_pkgid, FILENAME_MAX, "%s.new", pkgid);
 	ret = _app2sd_create_loopback_device(temp_pkgid, (size+PKG_BUF_SIZE));
 	if (ret) {
 		app2ext_print("App2Sd Error : Package already present\n");
@@ -1418,8 +1419,7 @@ int _app2sd_update_loopback_device_size(const char *pkgid,
 	char temp_pkgid[FILENAME_MAX] = { 0, };
 	char app_path[FILENAME_MAX] = { 0, };
 
-	snprintf(temp_pkgid, FILENAME_MAX,
-		 "%s.new", pkgid);
+	snprintf(temp_pkgid, FILENAME_MAX, "%s.new", pkgid);
 
 	ret = _app2sd_duplicate_device(pkgid, dir_list, device_node, size);
 	if (ret) {
