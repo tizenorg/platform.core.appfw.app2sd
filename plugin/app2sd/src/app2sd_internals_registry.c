@@ -34,8 +34,6 @@
 #include <dlog.h>
 #include <time.h>
 #include <db-util.h>
-
-/* For multi-user support */
 #include <tzplatform_config.h>
 
 #define MAX_QUERY_LEN 4096
@@ -172,7 +170,7 @@ char *_app2sd_get_password_from_db(const char *pkgid)
 
 	sqlite3_snprintf(MAX_QUERY_LEN, query,
 		 "select * from app2sd where pkgid LIKE '%s'", pkgid);
-	app2ext_print("\n access querys is %s ", query);
+	app2ext_print("access querys is %s ", query);
 
 	if (SQLITE_OK != sqlite3_prepare(app2sd_db, query,
 					 strlen(query), &stmt, &tail)) {
@@ -191,14 +189,14 @@ char *_app2sd_get_password_from_db(const char *pkgid)
 		goto FINISH_OFF;
 	}
 
-	app2ext_print("\n entry available in sqlite");
+	app2ext_print("entry available in sqlite");
 	strncpy(passwd, (const char*)sqlite3_column_text(stmt, 1),
 		PASSWORD_LENGTH);
 	if (passwd == NULL) {
 		app2ext_print("\n password is NULL ");
 		goto FINISH_OFF;
 	}
-	app2ext_print("\n passwd is %s ", passwd);
+	app2ext_print("passwd is %s ", passwd);
 	if (SQLITE_OK != sqlite3_finalize(stmt)) {
 		app2ext_print("error : sqlite3_finalize\n");
 		goto FINISH_OFF;
@@ -208,7 +206,7 @@ char *_app2sd_get_password_from_db(const char *pkgid)
 FINISH_OFF:
 	rc = sqlite3_finalize(stmt);
 	if (rc != SQLITE_OK) {
-		app2ext_print(" sqlite3_finalize failed - %d", rc);
+		app2ext_print("sqlite3_finalize failed - %d", rc);
 	}
 	if (passwd)
 		free(passwd);

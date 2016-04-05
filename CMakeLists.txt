@@ -7,6 +7,7 @@ SET(VERSION "${VERSION_MAJOR}.4.2")
 
 #Add your submodule directory name
 ADD_SUBDIRECTORY(plugin/app2sd)
+
 ### Required packages
 INCLUDE(FindPkgConfig)
 pkg_check_modules(pkgs REQUIRED dlog)
@@ -21,7 +22,7 @@ FOREACH(flag ${libpkgs_CFLAGS})
 	SET(EXTRA_CFLAGS "${EXTRA_CFLAGS} ${flag}")
 ENDFOREACH(flag)
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${EXTRA_CFLAGS}")
+SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${EXTRA_CFLAGS}")
 
 ### Local include directories
 INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/inc ${CMAKE_SOURCE_DIR}/src)
