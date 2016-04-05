@@ -14,21 +14,19 @@ FOREACH(flag ${pkgs_CFLAGS})
 	SET(EXTRA_CFLAGS "${EXTRA_CFLAGS} ${flag}")
 ENDFOREACH(flag)
 
-pkg_check_modules(libpkgs REQUIRED dlog)
-
-FOREACH(flag ${libpkgs_CFLAGS})
-	SET(EXTRA_CFLAGS "${EXTRA_CFLAGS} ${flag}")
-ENDFOREACH(flag)
-
 ### Local include directories
 INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/inc)
 
-SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIE ${EXTRA_CFLAGS}")
-SET(CMAKE_C_FLAGS_DEBUG "-O0 -g -Wall -Wextra -fPIE")
-SET(CMAKE_C_FLAGS_RELEASE "-O3 -fPIE")
+SET(EXTRA_CFLAGS "${EXTRA_CFLAGS} -fvisibility=hidden")
+SET(EXTRA_CFLAGS "${EXTRA_CFLAGS} -g -Wall -Werror")
+SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${EXTRA_CFLAGS}")
+
+SET(CMAKE_EXE_LINKER_FLAGS "-Wl,--as-needed")
 
 ADD_EXECUTABLE(test_app2ext ${SRCS})
-TARGET_LINK_LIBRARIES(test_app2ext app2ext -ldl ${pkgs_LDFLAGS} "-pie")
+TARGET_LINK_LIBRARIES(test_app2ext app2ext ${pkgs_LDFLAGS})
+SET_TARGET_PROPERTIES(test_app2ext PROPERTIES COMPILE_FLAGS ${CFLAGS} "-fPIE")
+SET_TARGET_PROPERTIES(test_app2ext PROPERTIES LINK_FLAGS "-pie")
 
 INSTALL(TARGETS test_app2ext DESTINATION /usr/bin COMPONENT Runtime)
 
