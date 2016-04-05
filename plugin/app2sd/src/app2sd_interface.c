@@ -26,13 +26,101 @@
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <glib.h>
+#include <gio/gio.h>
 #include <pkgmgr-info.h>
-#include <vconf.h>
 
-#define MAX_BUF_LEN	1024
+#define APP2SD_BUS_NAME "org.tizen.app2sd"
+#define APP2SD_OBJECT_PATH "/org/tizen/app2sd"
+#define APP2SD_INTERFACE_NAME "org.tizen.app2sd"
 
-int app2sd_pre_app_install(const char *pkgid, GList* dir_list,
-				int size)
+static int app2sd_gdbus_shared_connection(GDBusConnection **connection)
+{
+	GError *error = NULL;
+
+#if (GLIB_MAJOR_VERSION <= 2 && GLIB_MINOR_VERSION < 36)
+	g_type_init();
+#endif
+
+	*connection = g_bus_get_sync(G_BUS_TYPE_SYSTEM, NULL, &error);
+	if (*connection == NULL) {
+		if (error != NULL) {
+			_E("app2sd error : failed to get "
+				"system dbus [%s]\n", error->message);
+			g_error_free(error);
+		}
+		return APP2EXT_ERROR_DBUS_FAILED;
+	}
+
+	return APP2EXT_SUCCESS;
+}
+
+int app2sd_client_pre_app_install(const char *pkgid, GList* dir_list, int size)
+{
+	int ret = 0;
+	int free_mmc_mem = 0;
+	int reqd_disk_size = size + ceil(size*0.2);
+	char *dest_name = NULL;
+	GDBusConnection *conn = NULL;
+	GDBusProxy *proxy = NULL;
+	GError *error = NULL;
+	GVariant *param = NULL;
+	GVariant *value = NULL;
+	GVariantIter *iter;
+	gchar *str;
+	gint result = 0;
+
+	/* validate the function parameter recieved */
+	if (pkgid == NULL || dir_list == NULL || size <= 0) {
+		_E("invalid function arguments");
+		return APP2EXT_ERROR_INVALID_ARGUMENTS;
+	}
+
+	/* get gdbus connection */
+	ret = app2sd_gdbus_shared_connection(&conn);
+	if (ret) {
+		_E("app2sd error : dbus connection error");
+		return ret;
+	}
+
+	/* method call */
+	proxy = g_dbus_proxy_new_sync(conn,
+		G_DBUS_PROXY_FLAGS_NONE, NULL,
+		APP2SD_BUS_NAME, APP2SD_OBJECT_PATH, APP2SD_INTERFACE_NAME,
+		NULL, &error);
+	if (proxy == NULL) {
+		_E("failed to create new proxy, error(%s)", error->message);
+		g_error_free(error);
+		ret = APP2EXT_ERROR_DBUS_FAILED;
+		goto out;
+	}
+
+	param = g_variant_new("(s)", pkgid);
+	value = g_dbus_proxy_call_sync(proxy, "PreAppInstall", param,
+		G_DBUS_CALL_FLAGS_NONE, -1, NULL, &error);
+	if (error != NULL) {
+		_E("proxy call sync error(%s)", error->message);
+		g_error_free(error);
+		ret = APP2EXT_ERROR_DBUS_FAILED;
+		goto out;
+	}
+
+	g_variant_get(value, "(i)", &result);
+	g_variant_unref(value);
+
+	_D("result(%d)", result);
+
+	/* Success */
+	ret = APP2EXT_SUCCESS;
+
+out:
+	if (conn)
+		g_object_unref(conn);
+
+	return ret;
+}
+
+int app2sd_pre_app_install(const char *pkgid, GList* dir_list, int size)
 {
 	int ret = 0;
 	int free_mmc_mem = 0;
@@ -848,21 +936,24 @@ int app2sd_force_clean(const char *pkgid)
 }
 
 /* This is the plug-in load function. The plugin has to bind its functions to function pointers of handle
-	@param[in/out]		st_interface 	Specifies the storage interface.
-*/
-void
-app2ext_on_load(app2ext_interface *st_interface)
+ * @param[in/out]	interface 	Specifies the storage interface.
+ */
+void app2ext_on_load(app2ext_interface *interface)
 {
-	/*Plug-in Binding.*/
-	st_interface->pre_install= app2sd_pre_app_install;
-	st_interface->post_install= app2sd_post_app_install;
-	st_interface->pre_uninstall= app2sd_pre_app_uninstall;
-	st_interface->post_uninstall= app2sd_post_app_uninstall;
-	st_interface->pre_upgrade= app2sd_pre_app_upgrade;
-	st_interface->post_upgrade= app2sd_post_app_upgrade;
-	st_interface->move= app2sd_move_installed_app;
-	st_interface->force_clean= app2sd_force_clean;
-	st_interface->enable= app2sd_on_demand_setup_init;
-	st_interface->disable= app2sd_on_demand_setup_exit;
+	/* Plug-in Binding.*/
+        /* TODO : remove */
+	interface->pre_install = app2sd_pre_app_install;
+	interface->post_install = app2sd_post_app_install;
+	interface->pre_uninstall = app2sd_pre_app_uninstall;
+	interface->post_uninstall = app2sd_post_app_uninstall;
+	interface->pre_upgrade = app2sd_pre_app_upgrade;
+	interface->post_upgrade = app2sd_post_app_upgrade;
+	interface->move = app2sd_move_installed_app;
+	interface->force_clean = app2sd_force_clean;
+	interface->enable = app2sd_on_demand_setup_init;
+	interface->disable = app2sd_on_demand_setup_exit;
+
+	/* client function */
+	interface->client_pre_install = app2sd_client_pre_app_install;
 }
 

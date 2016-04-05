@@ -62,10 +62,15 @@ extern "C" {
 #define LOG_TAG "APP2EXT"
 
 #ifdef _DEBUG_MODE_
-#define app2ext_print(fmt, arg...) LOGD(fmt,##arg)
+#define app2ext_print(fmt, arg...) LOGD(fmt, ##arg)
 #else
-#define app2ext_print(FMT, ARG...) SLOGD(FMT,##ARG);
+#define app2ext_print(FMT, ARG...) SLOGD(FMT, ##ARG);
 #endif
+
+#define _E(fmt, arg...) LOGE(fmt, ##arg)
+#define _D(fmt, arg...) LOGD(fmt, ##arg)
+#define _W(fmt, arg...) LOGW(fmt, ##arg)
+#define _I(fmt, arg...) LOGI(fmt, ##arg)
 
 #define APP2EXT_SUCCESS 0
 #define MMC_PATH tzplatform_mkpath(TZ_SYS_MEDIA, "sdcard")
@@ -157,7 +162,8 @@ typedef enum app2ext_error_t {
 	APP2EXT_ERROR_DETACH_LOOPBACK_DEVICE,
 	APP2EXT_ERROR_ALREADY_MOUNTED,
 	APP2EXT_ERROR_PLUGIN_INIT_FAILED,
-	APP2EXT_ERROR_PLUGIN_DEINIT_FAILED
+	APP2EXT_ERROR_PLUGIN_DEINIT_FAILED,
+	APP2EXT_ERROR_DBUS_FAILED
 } app2ext_error;
 
 /**
@@ -288,10 +294,32 @@ typedef int (*app2ext_disable)(const char *appname);
  */
 typedef int (*app2ext_force_clean)(const char *pkgid);
 
+
+/**
+ * @brief :This function type is for a function that is implemented by plugin
+ * and called before application is to be installed.
+ *
+ * @param[in]	appname		application package name which is to be installed
+ * @param[in]	dir_list	directory structure of the application
+ *                              This should be polulated by the package manager
+ *                              before calling pre_install and should be freed after
+ *                              pre_install returns.
+ *                              Each node of dir_list is of type app2ext_dir_details
+ *                              which has members Name(dirname) and Type (RO/RW)
+ *                              For eg for rpm the dir_list should be populated with
+ *                              nodes like : (lib, APP2EXT_DIR_RO), (res, APP2EXT_DIR_RO),
+                                (bin, APP2EXT_DIR_RO), (data, APP2EXT_DIR_RW)
+ * @param[in]	size		Size of the application
+ * @return	0 if success,  error code(>0) if fail
+ */
+typedef int (*app2ext_client_pre_install)(const char *appname, GList* dir_list, int size);
+
 /**
  * This structure defines the app2ext interfaces. Plugins have to implement these functions
  */
 typedef struct app2ext_interface_t{
+	/* for library function */
+	/* TODO : remove */
 	app2ext_pre_install		pre_install;
 	app2ext_post_install		post_install;
 	app2ext_pre_upgrade		pre_upgrade;
@@ -302,16 +330,19 @@ typedef struct app2ext_interface_t{
 	app2ext_force_clean		force_clean;
 	app2ext_enable			enable;
 	app2ext_disable			disable;
+	/* client function */
+	app2ext_client_pre_install	client_pre_install;
 } app2ext_interface;
 
 /**
  * This structure defines app2ext handle .Each storage type maps to a different plugin
- * type				: storage type
- * plugin_handle			: plugin handle
+ * type			: storage type,
+ * plugin_handle	: plugin handle, need to close dlopen handle
+ * interface		: inteface with plugin library
  */
 typedef struct {
 	app2ext_install_location 	type;
-	void 			*plugin_handle;
+	void				*plugin_handle;
 	app2ext_interface 		interface;
 } app2ext_handle;
 
