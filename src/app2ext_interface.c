@@ -33,55 +33,53 @@
 
 app2ext_handle *app2ext_init(int storage_type)
 {
-	/*Validate the function parameter recieved */
+	void *dl_handle = NULL;
+	int (*dl_on_load)(app2ext_interface *) = NULL;
+
+	/* Validate the function parameter recieved */
 	if (storage_type < APP2EXT_INTERNAL_MEM ||
 		storage_type > APP2EXT_CLOUD) {
-		app2ext_print("App2Ext Error : Invalid function arguments\n");
+		app2ext_print("app2ext error : invalid function arguments\n");
 		return NULL;
 	}
 	if (storage_type != APP2EXT_SD_CARD ) {
-		app2ext_print("App2Ext Error : Storage type currently not supported\n");
+		app2ext_print("app2ext error : storage type currently not supported\n");
 		return NULL;
 	}
 
-	/* allocate memory for app2ext handle*/
+	/* Allocate memory for app2ext handle*/
 	app2ext_handle *handle = (app2ext_handle *)calloc(1, sizeof(app2ext_handle));
 	if (handle == NULL) {
-		app2ext_print("App2Ext Error : Memory allocation failure\n");
+		app2ext_print("app2ext error : memory allocation failed\n");
 		return NULL;
 	}
-	void *dl_handle = NULL;
-	int (*dl_on_load)(app2ext_interface *)=NULL;
 
 	/* Load SD plugin*/
 	handle->type = APP2EXT_SD_CARD;
 	dl_handle = dlopen(APP2EXT_SD_PLUGIN_PATH, RTLD_LAZY|RTLD_GLOBAL);
-	if (NULL == dl_handle)
-	{
-		app2ext_print("App2Ext Error : dlopen(%s) failed.\n", APP2EXT_SD_PLUGIN_PATH);
+	if (NULL == dl_handle) {
+		app2ext_print("app2ext error : dlopen(%s) failed\n", APP2EXT_SD_PLUGIN_PATH);
 		free(handle);
 		return NULL;
 	}
 	handle->plugin_handle = dl_handle;
 	dl_on_load = dlsym(dl_handle, "app2ext_on_load");
-	if (NULL == dl_on_load)
-	{
-		app2ext_print("App2Ext Error : Cannot find app2ext_on_load symbol in %s.", APP2EXT_SD_PLUGIN_PATH);
+	if (NULL == dl_on_load) {
+		app2ext_print("app2ext error : Cannot find app2ext_on_load symbol in (%s)", APP2EXT_SD_PLUGIN_PATH);
 		dlclose(dl_handle);
 		free(handle);
 		return NULL;
 	}
 
-	/*Initialize the SD plugin*/
-	if(!dl_on_load(&(handle->interface)))
-	{
-		app2ext_print("App2Ext Error : [%s] app2ext_on_load() failed.", APP2EXT_SD_PLUGIN_PATH);
+	/* Initialize the SD plugin*/
+	if (!dl_on_load(&(handle->interface))) {
+		app2ext_print("app2ext error : app2ext_on_load() failed in (%s)", APP2EXT_SD_PLUGIN_PATH);
 		dlclose(dl_handle);
 		free(handle);
 		return NULL;
 	}
 
-	app2ext_print("App2Ext: %s plugin loaded\n", APP2EXT_SD_PLUGIN_PATH);
+	app2ext_print("app2ext: plugin(%s) loaded\n", APP2EXT_SD_PLUGIN_PATH);
 
 	return handle;
 }
@@ -123,7 +121,6 @@ int app2ext_get_app_location(const char *appname)
 	app2ext_print("MMC_PATH = (%s)\n", MMC_PATH);
 	app2ext_print("APP2SD_PATH = (%s)\n", APP2SD_PATH);
 	app2ext_print("APP_INSTALLATION_PATH = (%s)\n", APP_INSTALLATION_PATH);
-	app2ext_print("APP_INSTALLATION_USER_PATH = (%s)\n", APP_INSTALLATION_USER_PATH);
 	app2ext_print("app_dir_path = (%s)\n", app_dir_path);
 	app2ext_print("app_mmc_path = (%s)\n", app_mmc_path);
 	app2ext_print("app_mmc_internal_path = (%s)\n", app_mmc_internal_path);
