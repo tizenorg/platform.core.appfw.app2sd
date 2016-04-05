@@ -7,12 +7,14 @@ License:    Apache-2.0
 Source0:    %{name}-%{version}.tar.gz
 
 BuildRequires:  pkgconfig(libssl)
-BuildRequires:  pkgconfig(vconf)
 BuildRequires:  pkgconfig(dlog)
 BuildRequires:  pkgconfig(openssl)
 BuildRequires:  pkgconfig(db-util)
 BuildRequires:  pkgconfig(pkgmgr-info)
+BuildRequires:  pkgconfig(minizip)
 BuildRequires:  pkgconfig(libtzplatform-config)
+BuildRequires:  pkgconfig(gio-2.0)
+BuildRequires:  pkgconfig(glib-2.0)
 BuildRequires:  cmake
 
 %description
@@ -58,6 +60,8 @@ cp LICENSE %{buildroot}/usr/share/license/%{name}
 %defattr(-,root,root,-)
 %{_libdir}/libapp2ext.so.*
 %{_libdir}/libapp2sd.so*
+%{_bindir}/app2sd-server
+%{_datadir}/dbus-1/system-services/org.tizen.app2sd.service
 /usr/share/license/%{name}
 
 
