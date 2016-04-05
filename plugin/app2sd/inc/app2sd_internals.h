@@ -101,10 +101,11 @@ int _xsystem(const char *argv[]);
 int _app2sd_get_available_free_memory(const char *sd_path, int *free_mem);
 
 /*Function to move the application from/to SD Card*/
-int _app2sd_move_app(const char *pkgid, app2ext_move_type move_cmd, GList* dir_list);
+int _app2sd_move_app(const char *pkgid, app2ext_move_type move_cmd,
+		GList* dir_list);
 
 /*utility to delete the directory*/
-int _app2sd_delete_directory(char *dirname);
+int _app2sd_delete_directory(const char *dirname);
 
 /*utility to delete symbolic link*/
 void _app2sd_delete_symlink(const char *dirname);
@@ -122,16 +123,18 @@ int _app2sd_copy_dir(const char *src, const char *dest);
 int _app2sd_rename_dir(const char *old_name, const char *new_name);
 
 /*Utility to create application directory structure entry as per package type*/
-int _app2sd_create_directory_entry(const char *pkgid, GList* dir_list);
+int _app2sd_create_directory_entry(const char *application_path,
+		GList* dir_list);
 
 /* Utility to create symlinks */
 int _app2sd_create_symlink(char *pkgid);
 
 /*This function finds the associated device node for the app*/
-char *_app2sd_find_associated_device_node(const char *pkgid);
+char *_app2sd_find_associated_device_node(const char *loopback_device);
 
 /*This function does the loopback encryption for app*/
-char *_app2sd_do_loopback_encryption_setup(const char *pkgid);
+char *_app2sd_do_loopback_encryption_setup(const char *pkgid,
+		const char *loopback_device);
 
 /*This function detaches the loopback device*/
 char *_app2sd_detach_loop_device(const char *device);
@@ -140,37 +143,40 @@ char *_app2sd_detach_loop_device(const char *device);
 char *_app2sd_find_associated_device(const char *mmc_app_path);
 
 /*This function creates loopback device*/
-int _app2sd_create_loopback_device(const char *pkgid, int size);
+int _app2sd_create_loopback_device(const char *pkgid,
+		const char *loopback_device, int size);
 
 /*This function deletes loopback device associated with the app*/
-int _app2sd_delete_loopback_device(const char *pkgid);
+int _app2sd_delete_loopback_device(const char *loopback_device);
 
 /*This function creates ext4 FS on the device path*/
 int _app2sd_create_file_system(const char *device_path);
 
 /*This function mounts the app content on the device node*/
-int _app2sd_mount_app_content(const char *pkgid, const char *dev,
-			int mount_type, GList* dir_list, app2sd_cmd cmd);
+int _app2sd_mount_app_content(const char *application_path, const char *dev,
+		int mount_type, GList* dir_list, app2sd_cmd cmd);
 
 /*This function unmounts the app content */
-int _app2sd_unmount_app_content(const char *pkgid);
+int _app2sd_unmount_app_content(const char *application_path);
 
 /*This function removes the loopbck encryption setup for the app*/
-int _app2sd_remove_loopback_encryption_setup(const char *pkgid);
+int _app2sd_remove_loopback_encryption_setup(const char *loopback_device);
 
 /*This function removes all of loopbck encryption setup for the app*/
-int _app2sd_remove_all_loopback_encryption_setups(const char *pkgid);
+int _app2sd_remove_all_loopback_encryption_setups(const char *loopback_device);
 
 /*This function updates loopback device size*/
 int _app2sd_update_loopback_device_size(const char *pkgid,
-	int size, GList* dir_list);
+		const char *loopback_device, const char *application_path,
+		const char *temp_pkgid, const char *temp_loopback_device,
+		const char *temp_application_path, int size, GList* dir_list);
 
 /* This generates password */
 char *_app2sd_generate_password(const char *pkgid);
 
 /*This function encrypts device*/
-char *_app2sd_encrypt_device(const char *device, const char *pkgid,
-                              char *passwd);
+char *_app2sd_encrypt_device(const char *device, const char *loopback_device,
+		char *passwd);
 
 /*This function finds free device*/
 char *_app2sd_find_free_device(void);
@@ -185,10 +191,9 @@ char *_app2sd_get_password_from_db(const char *pkgid);
 int _app2sd_remove_password_from_db(const char *pkgid);
 
 /* This functions saved password in db */
-int _app2sd_set_password_in_db(const char *pkgid,
-				      const char *passwd);
+int _app2sd_set_password_in_db(const char *pkgid, const char *passwd);
 
 /* This functions make result file */
-void _app2sd_make_result_info_file(char *pkgid, int size);
+void _app2sd_make_result_info_file(char *pkgid, int size, uid_t uid);
 
 #endif

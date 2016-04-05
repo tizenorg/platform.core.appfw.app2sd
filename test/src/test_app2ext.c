@@ -27,21 +27,23 @@
 #include <errno.h>
 #include <sys/wait.h>
 #include <sys/types.h>
+#include <aul.h>
+#include <tzplatform_config.h>
 #include <app2ext_interface.h>
 
 #define SUCCESS 0
 #define FAIL 1
 #define CMD_LEN 256
+#define TEST_PKGNAME "org.example.basicuiapplication"
+#define TEST_PKGNAME_PATH "/tmp/org.example.basicuiapplication-1.0.0-arm.tpk"
 
 app2ext_handle *handle = NULL;
 
-#define TEST_PKGNAME "org.example.basicuiapplication"
-
 char pkg_ro_content_rpm[3][5] = { "bin", "res", "lib" };
 
-char error_list[45][100] = {
+char error_list[48][100] = {
 	"SUCCESS",
-	"APP2EXT_ERROR_UNKNOW",
+	"APP2EXT_ERROR_UNKNOWN",
 	"APP2EXT_ERROR_INVALID_ARGUMENTS",
 	"APP2EXT_ERROR_MOVE",
 	"APP2EXT_ERROR_PRE_UNINSTALL",
@@ -84,7 +86,10 @@ char error_list[45][100] = {
 	"APP2EXT_ERROR_DETACH_LOOPBACK_DEVICE",
 	"APP2EXT_ERROR_ALREADY_MOUNTED",
 	"APP2EXT_ERROR_PLUGIN_INIT_FAILED",
-	"APP2EXT_ERROR_PLUGIN_DEINIT_FAILED"
+	"APP2EXT_ERROR_PLUGIN_DEINIT_FAILED",
+	"APP2EXT_ERROR_DBUS_FAILED",
+	"APP2EXT_ERROR_MEMORY_ALLOC_FAILED",
+	"APP2EXT_ERROR_OPERATION_NOT_PERMITTED"
 };
 
 static int __get_integer_input_data(void);
@@ -112,67 +117,27 @@ static void usage(void)
 	printf("\n*********************************************\n");
 	printf("app2sd test\n");
 	printf("test_case\n");
-	printf("<1> app_install (pre-install, install, post-install, enable, launch, disable)\n");
-	printf("<2> app_uninstall (pre-uninstall, uninstall, post-uninstall)\n");
-	printf("<3> app_upgrade (pre-upgrade, upgrade, post-Upgrade)\n");
-	printf("<4> app_move\n");
+	printf("<1> app_install_client (pre-install, install, post-install)\n");
+	printf("<2> app_uninstall_client (pre-uninstall, uninstall, post-uninstall)\n");
+	printf("<3> app_upgrade_client (pre-upgrade, upgrade, post-Upgrade)\n");
+	printf("<4> app_move_client\n");
 	printf("<5> app_get_location\n");
-        printf("<6> enable_external_dir\n");
-        printf("<7> disable_external_dir\n");
-	printf("<8> exit\n");
-}
-
-GList * populate_dir_details()
-{
-	GList *dir_list = NULL;
-	GList *list = NULL;
-	app2ext_dir_details* dir_detail = NULL;
-	int i;
-
-
-	for (i=0; i<3; i++) {
-		dir_detail = (app2ext_dir_details*) calloc(1, sizeof(app2ext_dir_details));
-		if (dir_detail == NULL) {
-			printf("\nMemory allocation failed\n");
-			goto FINISH_OFF;
-		}
-		dir_detail->name = (char*) calloc(1, sizeof(char)*(strlen(pkg_ro_content_rpm[i])+2));
-		if (dir_detail->name == NULL) {
-			printf("\nMemory allocation failed\n");
-			free(dir_detail);
-			goto FINISH_OFF;
-		}
-		snprintf(dir_detail->name, (strlen(pkg_ro_content_rpm[i])+1), "%s", pkg_ro_content_rpm[i]);
-		dir_detail->type = APP2EXT_DIR_RO;
-		dir_list = g_list_append(dir_list, dir_detail);
-	}
-	if (dir_list) {
-		list = g_list_first(dir_list);
-		while (list) {
-			dir_detail = (app2ext_dir_details *)list->data;
-			list = g_list_next(list);
-		}
-	}
-	return dir_list;
-FINISH_OFF:
-	if (dir_list) {
-		list = g_list_first(dir_list);
-		while (list) {
-			dir_detail = (app2ext_dir_details *)list->data;
-			if (dir_detail && dir_detail->name) {
-				free(dir_detail->name);
-			}
-			list = g_list_next(list);
-		}
-		g_list_free(dir_list);
-	}
-	return NULL;
+        printf("<6> enable_external\n");
+        printf("<7> disable_external\n");
+	/*
+	printf("<8> app_install (pre-install, install, post-install)\n");
+	printf("<9> app_uninstall (pre-uninstall, uninstall, post-uninstall)\n");
+	printf("<10> app_upgrade (pre-upgrade, upgrade, post-Upgrade)\n");
+	printf("<11> app_move\n");
+	*/
+	printf("<20> exit\n");
 }
 
 void clear_dir_list(GList* dir_list)
 {
 	GList *list = NULL;
 	app2ext_dir_details* dir_detail = NULL;
+
 	if (dir_list) {
 		list = g_list_first(dir_list);
 		while (list) {
@@ -186,49 +151,99 @@ void clear_dir_list(GList* dir_list)
 	}
 }
 
-int app_install()
+GList * populate_dir_details()
 {
-	printf("app_install %s\n", TEST_PKGNAME);
+	GList *dir_list = NULL;
+	GList *list = NULL;
+	app2ext_dir_details *dir_detail = NULL;
+	int i;
+
+	for (i = 0; i < 3; i++) {
+		dir_detail = (app2ext_dir_details*)calloc(1, sizeof(app2ext_dir_details));
+		if (dir_detail == NULL) {
+			printf("memory allocation failed\n");
+			goto FINISH_OFF;
+		}
+
+		dir_detail->name = (char*)calloc(1, sizeof(char) * (strlen(pkg_ro_content_rpm[i]) + 2));
+		if (dir_detail->name == NULL) {
+			printf("memory allocation failed\n");
+			free(dir_detail);
+			goto FINISH_OFF;
+		}
+		snprintf(dir_detail->name, (strlen(pkg_ro_content_rpm[i]) + 1), "%s", pkg_ro_content_rpm[i]);
+		dir_detail->type = APP2EXT_DIR_RO;
+		dir_list = g_list_append(dir_list, dir_detail);
+	}
+
+	if (dir_list) {
+		list = g_list_first(dir_list);
+		while (list) {
+			dir_detail = (app2ext_dir_details *)list->data;
+			list = g_list_next(list);
+		}
+	}
+
+	return dir_list;
+
+FINISH_OFF:
+
+	clear_dir_list(dir_list);
+
+	return NULL;
+}
+
+int app_install_client()
+{
 	GList *dir_list = NULL;
 	int ret = -1;
 
-	//char cmd_install[CMD_LEN+1];
-	//snprintf(cmd_install, CMD_LEN,"tpk-backend -y %s", TEST_PKGNAME);
+	printf("app_install_client for [%s]\n", TEST_PKGNAME_PATH);
+
+	//char cmd_install[CMD_LEN + 1];
+	//snprintf(cmd_install, CMD_LEN, "tpk-backend -i %s", TEST_PKGNAME_PATH);
 
 	dir_list = populate_dir_details();
 	if (dir_list == NULL) {
 		printf("Error in populating the directory list\n");
 		return -1;
 	}
-	ret = handle->interface.pre_install(TEST_PKGNAME, dir_list, 20);
+
+	/* size : in MB */
+	ret = handle->interface.client_usr_pre_install(TEST_PKGNAME,
+		dir_list, 20, getuid());
 	if (ret) {
-		printf("pre_install failed(%s)\n", error_list[ret]);
+		printf("client_pre_install failed(%s)\n", error_list[ret]);
 		clear_dir_list(dir_list);
 		return -1;
 	}
 
+	//printf("cmd_install(%s)\n", cmd_install);
+	//ret = system(cmd_install);
 	/*
-	printf("\n cmd_install is %s ", cmd_install);
-	ret = system(cmd_install);
 	if (ret) {
+		printf("install command failed(%d)\n", ret);
 
-		printf("tpk-backend  install command  fail %d ", ret);
-		ret = handle->interface.post_install(TEST_PKGNAME, 1);
+		ret = handle->interface.post_install(TEST_PKGNAME,
+			APP2EXT_STATUS_FAILED);
 		if (ret) {
 			printf("post_install failed(%s)\n", error_list[ret]);
 		}
+
 		clear_dir_list(dir_list);
 		return -1;
 	}
 	*/
 
-	ret = handle->interface.post_install(TEST_PKGNAME, 2);
+	ret = handle->interface.client_usr_post_install(TEST_PKGNAME,
+		APP2EXT_STATUS_SUCCESS, getuid());
 	if (ret) {
-		printf("post_install failed(%s)\n", error_list[ret]);
+		printf("client_post_install failed(%s)\n", error_list[ret]);
 		clear_dir_list(dir_list);
 		return -1;
 	}
 
+	/*
 	ret = handle->interface.enable(TEST_PKGNAME);
 	if (ret) {
 		printf("enable failed(%s)\n", error_list[ret]);
@@ -236,48 +251,30 @@ int app_install()
 		return -1;
 	}
 
-	/*
-	printf("\nLaunching application after install");
-	ret = aul_open_app(TEST_PKGNAME);
-
-	if (ret < 0)
-		printf("\n launch fail");
-	else
-		printf("\n application launched");
-
-	sleep(5);
-
-	ret = system("killall -9 basicuiapplication");
-	if (ret < 0)
-		printf("\n app exit fail");
-	else
-		printf("\n application exited");
-
-	sleep(5);
-	*/
-
 	ret = handle->interface.disable(TEST_PKGNAME);
 	if (ret < 0 || ret > 44) {
 		printf("disable failed : unknown error\n");
 	} else {
 		printf("disable return(%s)\n", error_list[ret]);
 	}
+	*/
 
 	clear_dir_list(dir_list);
 
 	return ret;
 }
 
-int app_uninstall()
+int app_uninstall_client()
 {
-	printf("app_uninstall  %s\n", TEST_PKGNAME);
+	printf("app_uninstall_client for [%s]\n", TEST_PKGNAME);
 	int ret = -1;
+
 	//char cmd_uninstall[CMD_LEN+1];
 	//snprintf(cmd_uninstall, CMD_LEN, "tpk-backend -y %s", TEST_PKGNAME);
 
-	ret = handle->interface.pre_uninstall(TEST_PKGNAME);
+	ret = handle->interface.client_usr_pre_uninstall(TEST_PKGNAME, getuid());
 	if (ret) {
-		printf("pre_uninstall failed(%s)", error_list[ret]);
+		printf("client_pre_uninstall failed(%s)", error_list[ret]);
 		return -1;
 	}
 
@@ -290,18 +287,18 @@ int app_uninstall()
 	}
 	*/
 
-	ret = handle->interface.post_uninstall(TEST_PKGNAME);
+	ret = handle->interface.client_usr_post_uninstall(TEST_PKGNAME, getuid());
 	if (ret) {
-		printf("post app uninstall API fail Reason %s\n", error_list[ret]);
+		printf("client_post_uninstall API fail Reason %s\n", error_list[ret]);
 		return -1;
 	}
 
 	return ret;
 }
 
-int app_upgrade()
+int app_upgrade_client()
 {
-	printf("app_upgrade  %s\n", TEST_PKGNAME);
+	printf("app_upgrade_client for [%s]\n", TEST_PKGNAME);
 	int ret = -1;
 	//char cmd_uninstall[CMD_LEN+1];
 	//snprintf(cmd_uninstall, CMD_LEN, "rpm -U %s", TEST_PKGNAME);
@@ -312,7 +309,7 @@ int app_upgrade()
 		return -1;
 	}
 
-	ret = handle->interface.pre_upgrade(TEST_PKGNAME, dir_list, 40);
+	ret = handle->interface.client_usr_pre_upgrade(TEST_PKGNAME, dir_list, 40, getuid());
 	if (ret) {
 		printf("pre app upgrade API fail. Reason %s\n", error_list[ret]);
 		clear_dir_list(dir_list);
@@ -333,7 +330,7 @@ int app_upgrade()
 	}
 	*/
 
-	ret = handle->interface.post_upgrade(TEST_PKGNAME, 2);
+	ret = handle->interface.client_usr_post_upgrade(TEST_PKGNAME, 2, getuid());
 	if (ret) {
 		printf("\n TC : post app upgrade API fail Reason %s", error_list[ret]);
 		clear_dir_list(dir_list);
@@ -343,6 +340,7 @@ int app_upgrade()
 	return ret;
 }
 
+#if 0
 int app_move()
 {
 	printf("app_move  %s\n", TEST_PKGNAME);
@@ -393,17 +391,18 @@ int app_move()
 	clear_dir_list(dir_list);
 	return ret;
 }
+#endif
 
 void app_get_location()
 {
 	printf("app_get_location  %s \n", TEST_PKGNAME);
 	int ret = -1;
 
-	ret = app2ext_get_app_location(TEST_PKGNAME);
+	ret = app2ext_usr_get_app_location(TEST_PKGNAME, getuid());
 	if (ret == APP2EXT_SD_CARD) {
 		printf("\n app %s is in sd card ", TEST_PKGNAME);
 	} else if (ret == APP2EXT_INTERNAL_MEM) {
-		printf("\n app %s  is  in internal memory ", TEST_PKGNAME);
+		printf("\n app %s is in internal memory ", TEST_PKGNAME);
 	} else {
 		printf("\napp %s is not installed", TEST_PKGNAME);
 	}
@@ -411,14 +410,14 @@ void app_get_location()
 
 void enable_external_dir()
 {
-	printf("enable_external_dir\n");
+	printf("enable_external_dir_client\n");
 	int ret = -1;
 
-	ret = app2ext_enable_external_dir();
+	ret = app2ext_usr_enable_external_dir(getuid());
 	if (ret == 0) {
-		printf("\n app2ext_enable_external_dir() success");
+		printf("success\n");
 	} else {
-		printf("\n app2ext_enable_external_dir() failed");
+		printf("failed\n");
 	}
 }
 
@@ -427,19 +426,25 @@ void disable_external_dir()
 	printf("disable_external_dir\n");
 	int ret = -1;
 
-	ret = app2ext_disable_external_dir();
+	ret = app2ext_usr_disable_external_dir(getuid());
 	if (ret == 0) {
-		printf("\n app2ext_disable_external_dir() success");
+		printf("success\n");
 	} else {
-		printf("\n app2ext_disable_external_dir() failed");
+		printf("failed\n");
 	}
 }
 
 int main(int argc, char **argv)
 {
 	int ret = 0;
+	uid_t uid = getuid();
 
-	/* check authorized user */
+	/* check user */
+	if (uid == OWNER_ROOT || uid == GLOBAL_USER) {
+		printf("test for global app\n");
+	} else {
+		printf("test for user(%d) app\n", uid);
+	}
 
 	handle = app2ext_init(APP2EXT_SD_CARD);
 	if (handle == NULL) {
@@ -454,16 +459,16 @@ int main(int argc, char **argv)
 		int option = __get_integer_input_data();
 		switch (option) {
 		case 1:
-			app_install();
+			app_install_client();
 			break;
 		case 2:
-			app_uninstall();
+			app_uninstall_client();
 			break;
 		case 3:
-			app_upgrade();
+			app_upgrade_client();
 			break;
 		case 4:
-			app_move();
+			//app_move()_client;
 			break;
 		case 5:
 			app_get_location();
@@ -474,7 +479,21 @@ int main(int argc, char **argv)
 		case 7:
 			disable_external_dir();
 			break;
+		/* old function
 		case 8:
+			app_install();
+			break;
+		case 9:
+			app_uninstall();
+			break;
+		case 10:
+			app_upgrade();
+			break;
+		case 11:
+			app_move()
+			break;
+		*/
+		case 20:
 			app2ext_deinit(handle);
 			printf("Exit!\n");
 			return 0;
