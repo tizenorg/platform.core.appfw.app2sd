@@ -1,0 +1,12 @@
+<!DOCTYPE busconfig PUBLIC
+"-//freedesktop//DTD D-BUS Bus Configuration 1.0//EN"
+"http://www.freedesktop.org/standards/dbus/1.0/busconfig.dtd">
+
+<busconfig>
+	<policy user="root">
+		<allow own="org.tizen.app2sd"/>
+	</policy>
+	<policy context="default">
+		<check send_destination="org.tizen.app2sd" send_interface="org.tizen.app2sd" privilege="http://tizen.org/privilege/packagemanager.admin"/>
+	</policy>
+</busconfig>
