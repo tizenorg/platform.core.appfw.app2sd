@@ -39,7 +39,6 @@
 #include <fcntl.h>
 #include <time.h>
 #include <dlog.h>
-#include <privilege-control.h>
 #include <sys/statvfs.h>
 
 extern int app2sd_force_clean(const char *pkgid);

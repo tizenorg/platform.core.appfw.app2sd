@@ -12,7 +12,6 @@ BuildRequires:  pkgconfig(dlog)
 BuildRequires:  pkgconfig(openssl)
 BuildRequires:  pkgconfig(db-util)
 BuildRequires:  pkgconfig(pkgmgr-info)
-BuildRequires:  pkgconfig(libprivilege-control)
 BuildRequires:  pkgconfig(libtzplatform-config)
 BuildRequires:  cmake
 
