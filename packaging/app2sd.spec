@@ -15,6 +15,7 @@ BuildRequires:  pkgconfig(minizip)
 BuildRequires:  pkgconfig(libtzplatform-config)
 BuildRequires:  pkgconfig(gio-2.0)
 BuildRequires:  pkgconfig(glib-2.0)
+BuildRequires:  cryptsetup
 BuildRequires:  cmake
 
 %description

@@ -196,4 +196,16 @@ void _app2sd_make_result_info_file(char *pkgid, int size, uid_t uid);
 
 int _is_global(uid_t uid);
 
+/*This function setup dmcrypt header in the app2sd file */
+int _app2sd_dmcrypt_setup_device(const char *pkgid);
+
+/*This function maps the app2sd file with a dmcrypt device node */
+int _app2sd_dmcrypt_open_device(const char *pkgid, char **dev_node);
+
+/*This function remove dmcrypt device node */
+int _app2sd_dmcrypt_close_device(const char *pkgid);
+
+/*This function find associated dmcrypt device node */
+char *_app2sd_find_associated_dmcrypt_device_node(const char *pkgid);
+
 #endif
