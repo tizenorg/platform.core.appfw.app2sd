@@ -261,7 +261,6 @@ unsigned long long _app2sd_calculate_file_size(const char *filename)
 char *_app2sd_encrypt_device(const char *device,
 	const char *loopback_device, char *passwd)
 {
-	/* TODO : change to dm-crypt */
 	const char *argv[] = { "/sbin/losetup", device,
 		loopback_device, NULL };
 	pid_t pid = 0;
