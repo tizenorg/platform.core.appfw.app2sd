@@ -28,6 +28,11 @@
 
 #include "app2sd_internals.h"
 
+#ifdef _APPFW_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
+#define DMCRYPT_ITER_TIME	50
+#define DMCRYPT_KEY_LEN		128
+#endif
+
 static int _app2sd_make_directory(const char *path, uid_t uid)
 {
 	int ret = 0;
@@ -349,6 +354,234 @@ int _app2sd_remove_all_loopback_encryption_setups(const char *loopback_device)
 
 	return ret;
 }
+
+#ifdef _APPFW_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
+int _app2sd_dmcrypt_setup_device(const char *pkgid)
+{
+	int ret = APP2EXT_SUCCESS;
+	char *passwd = NULL;
+	char app_path[FILENAME_MAX] = { 0, };
+	char dmcrypt_setup_cmd[BUF_SIZE] = { 0, };
+	char err_buf[BUF_SIZE] = { 0, };
+	char d_pkgid[BUF_SIZE] = { 0, };
+
+	_D("start");
+
+	if (pkgid == NULL) {
+		_E("invalid argument");
+		return APP2EXT_ERROR_INVALID_ARGUMENTS;
+	}
+
+	if(strncmp(pkgid, APP2SD_PATH, strlen(APP2SD_PATH)) != 0) {
+		snprintf(app_path, FILENAME_MAX, "%s%s", APP2SD_PATH, pkgid);
+		snprintf(d_pkgid, BUF_SIZE, "%s", pkgid);
+	} else {
+		/* This will be used in case of upgrade where we have to
+		 * create duplicate device ("pkgid.new")
+		 */
+		snprintf(app_path, FILENAME_MAX, "%s", pkgid);
+		snprintf(d_pkgid, strlen(pkgid) - strlen(APP2SD_PATH) - 3,
+			"%s", pkgid+ strlen(APP2SD_PATH));
+	}
+
+	_D("d_pkgid: [%s]", d_pkgid);
+
+	/* get password for dmcrypt encryption */
+	ret = _app2sd_initialize_db();
+	if (ret) {
+		_LOGE("app2sd db initialize failed");
+		return APP2EXT_ERROR_DB_INITIALIZE;
+	}
+
+	if ((passwd = _app2sd_get_password_from_db(d_pkgid)) == NULL) {
+		passwd = (char *)_app2sd_generate_password(d_pkgid);
+		if (NULL == passwd) {
+			_E("unable to generate password\n");
+			return APP2EXT_ERROR_PASSWORD_GENERATION;
+		} else {
+			if ((ret = _app2sd_set_password_in_db(d_pkgid, passwd)) < 0) {
+				_E("unable to save password");
+				free(passwd);
+				passwd = NULL;
+				return APP2EXT_ERROR_SQLITE_REGISTRY;
+			}
+		}
+	}
+
+	snprintf(dmcrypt_setup_cmd, BUF_SIZE, "echo '%s' | cryptsetup -q -i %d " \
+		"-c aes-cbc-lmk -s %d --align-payload=8 luksFormat %s",
+		passwd, DMCRYPT_ITER_TIME, DMCRYPT_KEY_LEN, app_path);
+	_D("[%s]", dmcrypt_setup_cmd);
+
+	ret = system(dmcrypt_setup_cmd);
+	if (ret) {
+		if (strerror_r(errno, err_buf, sizeof(err_buf)))
+			_E("Error setting up dmcrypt on app2sd file," \
+				" error: [%s], ret = [%d]", err_buf, ret);
+		if (passwd) {
+			free(passwd);
+			passwd = NULL;
+		}
+		return APP2EXT_ERROR_SETUP_DMCRYPT_DEVICE;
+	}
+
+	if (passwd) {
+		free(passwd);
+		passwd = NULL;
+	}
+	_D("end");
+
+	return ret;
+}
+
+int _app2sd_dmcrypt_open_device(const char *pkgid, char **dev_node)
+{
+	int ret = APP2EXT_SUCCESS;
+	char *passwd = NULL;
+	char app_path[FILENAME_MAX] = { 0, };
+	char dmcrypt_open_cmd[BUF_SIZE] = { 0, };
+	char err_buf[BUF_SIZE] = { 0, };
+	char orig_pkgid[BUF_SIZE] = { 0, };
+	char *dup_pkgid = NULL;
+	int len = 0;
+
+	_D("start");
+
+	if (pkgid == NULL) {
+		_E("invalid argument");
+		return APP2EXT_ERROR_INVALID_ARGUMENTS;
+	}
+
+	if (strncmp(pkgid, APP2SD_PATH, strlen(APP2SD_PATH)) != 0) {
+		snprintf(app_path, FILENAME_MAX, "%s%s", APP2SD_PATH, pkgid);
+		snprintf(orig_pkgid, BUF_SIZE, "%s", pkgid);
+		dup_pkgid = pkgid;
+	} else {
+		/* this will be used in case of upgrade where we have to
+		 * create duplicate device ("pkgid.new")
+		 */
+		snprintf(app_path, FILENAME_MAX, "%s", pkgid);
+		snprintf(orig_pkgid, strlen(pkgid) - strlen(APP2SD_PATH) - 3,
+			"%s", pkgid+ strlen(APP2SD_PATH));
+		dup_pkgid = pkgid + strlen(APP2SD_PATH);
+	}
+
+	/* get password for dmcrypt encryption */
+	ret = _app2sd_initialize_db();
+	if (ret) {
+		_E("app2sd db initialize failed");
+		return APP2EXT_ERROR_DB_INITIALIZE;
+	}
+	if ((passwd = _app2sd_get_password_from_db(orig_pkgid)) == NULL) {
+		_E("no password found for [%s]", orig_pkgid);
+		return APP2EXT_ERROR_SQLITE_REGISTRY;
+	}
+
+	snprintf(dmcrypt_open_cmd, BUF_SIZE, "echo '%s' | cryptsetup -q luksOpen %s %s",
+		passwd, app_path, dup_pkgid);
+	_D("[%s]", dmcrypt_open_cmd);
+
+	ret = system(dmcrypt_open_cmd);
+	if (ret) {
+		if (strerror_r(errno, err_buf, sizeof(err_buf)))
+			_E("error opening dmcrypt device, error: [%s]", err_buf);
+		return APP2EXT_ERROR_OPEN_DMCRYPT_DEVICE;
+	}
+
+	len = asprintf(dev_node, "/dev/mapper/%s", dup_pkgid);
+	if (!len) {
+		_E("asprintf error: not enough memory");
+		return -1;
+	}
+	_D("end");
+
+	return ret;
+}
+
+int _app2sd_dmcrypt_close_device(const char *pkgid)
+{
+	int ret = APP2EXT_SUCCESS;
+	char dev_node[BUF_SIZE] = { '\0' };
+	char dmcrypt_close_cmd[BUF_SIZE] = { '\0' };
+	char err_buf[BUF_SIZE] = { '\0' };
+	char *t_dev_node = NULL;
+
+	_D("start");
+	if (pkgid == NULL) {
+		_E("invalid argument\n");
+		return APP2EXT_ERROR_INVALID_ARGUMENTS;
+	}
+
+	t_dev_node = _app2sd_find_associated_dmcrypt_device_node(pkgid);
+	if (!t_dev_node) {
+		_D("no associated device node found for [%s]", pkgid);
+		return APP2EXT_ERROR_DMCRYPT_DEVICE_UNAVAILABLE;
+	}
+
+	free(t_dev_node);
+	t_dev_node = NULL;
+
+	snprintf(dev_node, BUF_SIZE, "/dev/mapper/%s", pkgid);
+	snprintf(dmcrypt_close_cmd, BUF_SIZE, "cryptsetup -q luksClose %s", dev_node);
+	ret = system(dmcrypt_close_cmd);
+	if (ret) {
+		if (strerror_r(errno, err_buf, sizeof(err_buf)))
+			_E("error closing dmcrypt on app2sd file,"\
+				" error: [%s]", err_buf);
+		return APP2EXT_ERROR_CLOSE_DMCRYPT_DEVICE;
+	}
+	_D("end");
+
+	return ret;
+}
+
+char* _app2sd_find_associated_dmcrypt_device_node(const char *pkgid)
+{
+	char *dev_node = NULL;
+
+	_D("start");
+	if(asprintf(&dev_node, "/dev/mapper/%s", pkgid) == 0) {
+		_E("not enough memory");
+		return NULL;
+	}
+
+	if (access(dev_node, F_OK) == 0) {
+		_D("_app2sd_find_associated_dmcrypt_device_node," \
+			" device_node: [%s]", dev_node);
+		return dev_node;
+	}
+
+	return NULL;
+}
+
+char* _app2sd_dmcrypt_duplicate_encryption_setup(const char *pkgid, const char * dup_appname)
+{
+	int ret = APP2EXT_SUCCESS;
+	char app_path[FILENAME_MAX] = { 0, };
+	char *device_node = NULL;
+
+	if (pkgid == NULL || dup_appname == NULL) {
+		_E("invalid argument\n");
+		return NULL;
+	}
+
+	snprintf(app_path, FILENAME_MAX, "%s%s", APP2SD_PATH, dup_appname);
+
+	ret = _app2sd_dmcrypt_setup_device(app_path);
+	if (ret) {
+		_E("_app2sd_dmcrypt_setup_device error");
+		return NULL;
+	}
+
+	ret = _app2sd_dmcrypt_open_device(app_path, &device_node);
+	if (ret) {
+		_LOGE("_app2sd_dmcrypt_open_device error");
+		return NULL;
+	}
+
+	return device_node;
+}
+#endif
 
 int _app2sd_create_loopback_device(const char *pkgid,
 		const char *loopback_device, int size)
@@ -742,6 +975,8 @@ int _app2sd_move_app_to_external(const char *pkgid, GList *dir_list, uid_t uid)
 		_E("loopback node creation failed");
 		return ret;
 	}
+
+#ifndef _APPFW_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
 	/* perform loopback encryption setup */
 	device_node = _app2sd_do_loopback_encryption_setup(pkgid,
 		loopback_device, uid);
@@ -759,11 +994,25 @@ int _app2sd_move_app_to_external(const char *pkgid, GList *dir_list, uid_t uid)
 		free(devi);
 		devi = NULL;
 	}
+#else
+	ret = _app2sd_dmcrypt_setup_device(pkgid);
+	if (ret) {
+		_E("_app2sd_dmcrypt_setup_device error");
+		return APP2EXT_ERROR_SETUP_DMCRYPT_DEVICE;
+	}
+
+	ret = _app2sd_dmcrypt_open_device(pkgid, &device_node);
+	if (ret) {
+		_E("_app2sd_dmcrypt_open_device error");
+		return APP2EXT_ERROR_OPEN_DMCRYPT_DEVICE;
+	}
+#endif
 	/* format the loopback file system */
 	ret = _app2sd_create_file_system(device_node);
 	if (ret) {
 		_E("create ext4 filesystem failed");
-		return APP2EXT_ERROR_CREATE_FS;
+		ret = APP2EXT_ERROR_CREATE_FS;
+		goto ERR;
 	}
 
 	list = g_list_first(dir_list);
