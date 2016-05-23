@@ -173,4 +173,18 @@ int _app2sd_get_info_from_db(const char *filename, char **pkgid, uid_t *uid);
 int _app2sd_force_clean(const char *pkgid, const char *application_path,
 		const char *loopback_device, uid_t uid);
 
+#ifdef _APPFW_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
+/*This function setup dmcrypt header in the app2sd file */
+int _app2sd_dmcrypt_setup_device(const char *pkgid);
+
+/*This function maps the app2sd file with a dmcrypt device node */
+int _app2sd_dmcrypt_open_device(const char *pkgid, char **dev_node);
+
+/*This function remove dmcrypt device node */
+int _app2sd_dmcrypt_close_device(const char *pkgid);
+
+/*This function find associated dmcrypt device node */
+char *_app2sd_find_associated_dmcrypt_device_node(const char *pkgid);
+#endif
+
 #endif
