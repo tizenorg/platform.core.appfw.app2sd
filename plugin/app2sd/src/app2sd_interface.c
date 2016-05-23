@@ -47,7 +47,9 @@ int app2sd_usr_pre_app_install(const char *pkgid, GList *dir_list, int size, uid
 	int ret = 0;
 	int free_mmc_mem = 0;
 	char *device_node = NULL;
+#if !defined(_APPFW_FEATURE_APP2SD_DMCRYPT_ENCRYPTION)
 	char *devi = NULL;
+#endif
 	char *result = NULL;
 	char application_path[FILENAME_MAX] = { 0, };
 	char loopback_device[FILENAME_MAX] = { 0, };
@@ -123,6 +125,20 @@ int app2sd_usr_pre_app_install(const char *pkgid, GList *dir_list, int size, uid
 	ret = _app2sd_create_loopback_device(pkgid, loopback_device,
 		(reqd_disk_size + PKG_BUF_SIZE));
 
+#ifdef _APPFW_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
+	ret = _app2sd_dmcrypt_setup_device(pkgid, loopback_device, false, uid);
+	if (ret) {
+		_E("dmcrypt setup device error");
+		return APP2EXT_ERROR_SETUP_DMCRYPT_DEVICE;
+	}
+
+	ret = _app2sd_dmcrypt_open_device(pkgid, loopback_device,
+		uid, &device_node);
+	if (ret) {
+		_E("dmcrypt open device error");
+		return APP2EXT_ERROR_OPEN_DMCRYPT_DEVICE;
+	}
+#else
 	/* perform loopback encryption setup */
 	device_node = _app2sd_do_loopback_encryption_setup(pkgid,
 		loopback_device, uid);
@@ -141,6 +157,7 @@ int app2sd_usr_pre_app_install(const char *pkgid, GList *dir_list, int size, uid
 		ret = APP2EXT_ERROR_DO_LOSETUP;
 		goto FINISH_OFF;
 	}
+#endif
 
 	/* format the loopback file system */
 	ret = _app2sd_create_file_system(device_node);
@@ -168,12 +185,19 @@ int app2sd_usr_pre_app_install(const char *pkgid, GList *dir_list, int size, uid
 
 FINISH_OFF:
 	if (device_node) {
+#ifdef _APPFW_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
+	ret = _app2sd_dmcrypt_close_device(loopback_device);
+	if (ret)
+		_E("close dmcrypt device error(%d)", ret);
+	_app2sd_delete_loopback_device(loopback_device);
+#else
 		result = _app2sd_detach_loop_device(device_node);
 		if (result) {
 			free(result);
 			result = NULL;
 		}
 		_app2sd_delete_loopback_device(loopback_device);
+#endif
 	}
 
 END:
@@ -182,10 +206,12 @@ END:
 		device_node = NULL;
 	}
 
+#if !defined(_APPFW_FEATURE_APP2SD_DMCRYPT_ENCRYPTION)
 	if (devi) {
 		free(devi);
 		devi = NULL;
 	}
+#endif
 
 	return ret;
 }
@@ -235,9 +261,16 @@ int app2sd_usr_post_app_install(const char *pkgid,
 	free(encoded_id);
 
 	/* get the associated device node for SD card applicationer */
+#ifdef _APPFW_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
+	device_name =
+		_app2sd_find_associated_dmcrypt_device_node(loopback_device);
+	if (!device_name)
+		return APP2EXT_ERROR_FIND_ASSOCIATED_DMCRYPT_DEVICE_NODE;
+#else
 	device_name = _app2sd_find_associated_device_node(loopback_device);
 	if (NULL == device_name)
 		return APP2EXT_ERROR_FIND_ASSOCIATED_DEVICE_NODE;
+#endif
 
 	ret = _app2sd_unmount_app_content(application_path);
 	if (ret) {
@@ -249,6 +282,17 @@ int app2sd_usr_post_app_install(const char *pkgid,
 		return APP2EXT_ERROR_UNMOUNT;
 	}
 
+#ifdef _APPFW_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
+	ret = _app2sd_dmcrypt_close_device(loopback_device);
+	if (ret) {
+		if (device_name) {
+			free(device_name);
+			device_name = NULL;
+		}
+		_E("close dmcrypt device error(%d)", ret);
+		return ret;
+	}
+#else
 	ret = _app2sd_remove_loopback_encryption_setup(loopback_device);
 	if (ret) {
 		if (device_name) {
@@ -259,6 +303,7 @@ int app2sd_usr_post_app_install(const char *pkgid,
 			" for the application");
 		return APP2EXT_ERROR_UNMOUNT;
 	}
+#endif
 
 	if (device_name) {
 		free(device_name);
@@ -306,7 +351,9 @@ int app2sd_usr_on_demand_setup_init(const char *pkgid, uid_t uid)
 	char loopback_device[FILENAME_MAX] = { 0, };
 	char *encoded_id = NULL;
 	char *device_node = NULL;
+#if !defined(_APPFW_FEATURE_APP2SD_DMCRYPT_ENCRYPTION)
 	char *result = NULL;
+#endif
 	FILE *fp = NULL;
 
 	/* validate the function parameter recieved */
@@ -349,6 +396,21 @@ int app2sd_usr_on_demand_setup_init(const char *pkgid, uid_t uid)
 	}
 	fclose(fp);
 
+#ifdef _APPFW_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
+	device_node =
+		_app2sd_find_associated_dmcrypt_device_node(loopback_device);
+	if (device_node) {
+		_E("loopback_device(%s) already associated", loopback_device);
+		return APP2EXT_ERROR_ALREADY_MOUNTED;
+	}
+
+	ret = _app2sd_dmcrypt_open_device(pkgid, loopback_device,
+		uid, &device_node);
+	if (ret) {
+		_E("dmcrypt open device error(%d)", ret);
+		return APP2EXT_ERROR_OPEN_DMCRYPT_DEVICE;
+	}
+#else
 	result = (char *)_app2sd_find_associated_device(loopback_device);
 	/* process the string */
 	if ((result != NULL) && strstr(result, "/dev") != NULL) {
@@ -365,6 +427,7 @@ int app2sd_usr_on_demand_setup_init(const char *pkgid, uid_t uid)
 		_E("loopback encryption setup failed");
 		return APP2EXT_ERROR_DO_LOSETUP;
 	}
+#endif
 
 	/* do mounting */
 	ret = _app2sd_mount_app_content(application_path, pkgid,
@@ -440,11 +503,17 @@ int app2sd_usr_on_demand_setup_exit(const char *pkgid, uid_t uid)
 		return APP2EXT_ERROR_UNMOUNT;
 	}
 
+#ifdef _APPFW_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
+	ret = _app2sd_dmcrypt_close_device(loopback_device);
+	if (ret)
+		_E("close dmcrypt device error(%d)", ret);
+#else
 	ret = _app2sd_remove_loopback_encryption_setup(loopback_device);
 	if (ret) {
 		_E("unable to remove loopback setup");
 		return APP2EXT_ERROR_DELETE_LOOPBACK_DEVICE;
 	}
+#endif
 
 	return ret;
 }
@@ -502,9 +571,22 @@ int app2sd_usr_pre_app_uninstall(const char *pkgid, uid_t uid)
 	fclose(fp);
 
 	/* get the associated device node for SD card applicationer */
+#ifdef _APPFW_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
+	device_node =
+		_app2sd_find_associated_dmcrypt_device_node(loopback_device);
+#else
 	device_node = _app2sd_find_associated_device_node(loopback_device);
+#endif
 	if (NULL == device_node) {
 		/* do loopback setup */
+#ifdef _APPFW_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
+		ret = _app2sd_dmcrypt_open_device(pkgid, loopback_device,
+			uid, &device_node);
+		if (ret) {
+			_E("dmcrypt open device error(%d)", ret);
+			return APP2EXT_ERROR_OPEN_DMCRYPT_DEVICE;
+		}
+#else
 		device_node = _app2sd_do_loopback_encryption_setup(pkgid,
 			loopback_device, uid);
 		if (device_node == NULL) {
@@ -512,6 +594,7 @@ int app2sd_usr_pre_app_uninstall(const char *pkgid, uid_t uid)
 			ret = APP2EXT_ERROR_DO_LOSETUP;
 			goto END;
 		}
+#endif
 		/* do mounting */
 		ret = _app2sd_mount_app_content(application_path, pkgid,
 			device_node, MOUNT_TYPE_RW, NULL,
@@ -600,6 +683,13 @@ int app2sd_usr_post_app_uninstall(const char *pkgid, uid_t uid)
 		goto END;
 	}
 	/* detach the loopback encryption setup for the application */
+#ifdef _APPFW_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
+	ret = _app2sd_dmcrypt_close_device(loopback_device);
+	if (ret) {
+		_E("close dmcrypt device error(%d)", ret);
+		goto END;
+	}
+#else
 	ret = _app2sd_remove_loopback_encryption_setup(loopback_device);
 	if (ret) {
 		_E("unable to Detach the loopback encryption setup" \
@@ -607,6 +697,7 @@ int app2sd_usr_post_app_uninstall(const char *pkgid, uid_t uid)
 		ret = APP2EXT_ERROR_DETACH_LOOPBACK_DEVICE;
 		goto END;
 	}
+#endif
 
 	/* delete the loopback device from the SD card */
 	ret = _app2sd_delete_loopback_device(loopback_device);
@@ -863,15 +954,29 @@ int app2sd_usr_pre_app_upgrade(const char *pkgid, GList *dir_list,
 	}
 
 	/* get the associated device node for SD card applicationer */
+#ifdef _APPFW_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
+	device_node =
+		_app2sd_find_associated_dmcrypt_device_node(loopback_device);
+#else
 	device_node = _app2sd_find_associated_device_node(loopback_device);
+#endif
 	if (NULL == device_node) {
 		/* do loopback setup */
+#ifdef _APPFW_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
+		ret = _app2sd_dmcrypt_open_device(pkgid, loopback_device,
+			uid, &device_node);
+		if (ret) {
+			_E("dmcrypt open device error");
+			return APP2EXT_ERROR_OPEN_DMCRYPT_DEVICE;
+		}
+#else
 		device_node = _app2sd_do_loopback_encryption_setup(pkgid,
 			loopback_device, uid);
 		if (device_node == NULL) {
 			_E("loopback encryption setup failed");
 			return APP2EXT_ERROR_DO_LOSETUP;
 		}
+#endif
 
 		/* do mounting */
 		ret = _app2sd_mount_app_content(application_path, pkgid,
@@ -950,9 +1055,19 @@ int app2sd_usr_post_app_upgrade(const char *pkgid,
 	free(encoded_id);
 
 	/* get the associated device node for SD card applicationer */
+#ifdef _APPFW_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
+	device_name =
+		_app2sd_find_associated_dmcrypt_device_node(loopback_device);
+	if (!device_name) {
+		_E("could not find associated dmcrypt device node" \
+			" for (%s)", pkgid);
+		return APP2EXT_ERROR_FIND_ASSOCIATED_DMCRYPT_DEVICE_NODE;
+	}
+#else
 	device_name = _app2sd_find_associated_device_node(loopback_device);
 	if (NULL == device_name)
 		return APP2EXT_ERROR_FIND_ASSOCIATED_DEVICE_NODE;
+#endif
 
 	ret = _app2sd_unmount_app_content(application_path);
 	if (ret) {
@@ -964,6 +1079,17 @@ int app2sd_usr_post_app_upgrade(const char *pkgid,
 		return APP2EXT_ERROR_UNMOUNT;
 	}
 
+#ifdef _APPFW_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
+	ret = _app2sd_dmcrypt_close_device(loopback_device);
+	if (ret) {
+		if (device_name) {
+			free(device_name);
+			device_name = NULL;
+		}
+		_E("close dmcrypt device error(%d)", ret);
+		return APP2EXT_ERROR_CLOSE_DMCRYPT_DEVICE;
+	}
+#else
 	ret = _app2sd_remove_loopback_encryption_setup(loopback_device);
 	if (ret) {
 		if (device_name) {
@@ -974,6 +1100,7 @@ int app2sd_usr_post_app_upgrade(const char *pkgid,
 			"setup for the application");
 		return APP2EXT_ERROR_UNMOUNT;
 	}
+#endif
 
 	if (device_name) {
 		free(device_name);
