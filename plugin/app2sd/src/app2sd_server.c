@@ -75,6 +75,7 @@ out:
 	return ret;
 }
 
+/*
 static int __app2sd_get_sender_pid(GDBusConnection *conn,
 		const char *sender_name)
 {
@@ -91,6 +92,7 @@ static int __app2sd_get_sender_pid(GDBusConnection *conn,
 
 	return pid;
 }
+*/
 
 static int __app2sd_get_sender_uid(GDBusConnection *conn,
 		const char *sender_name)

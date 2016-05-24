@@ -82,15 +82,6 @@ typedef enum app2sd_cmd_t {
 	APP2SD_MOVE_APP_TO_PHONE
 } app2sd_cmd;
 
-/*This will store password in DB*/
-int _app2sd_set_passwod_in_db(const char *pkgid, const char *password);
-
-/*This will remove password from db*/
-int _app2sd_remove_password_from_db(const char *pkgid);
-
-/*This will fetch password from db*/
-char *_app2sd_get_passowrd_from_db(const char *pkgid);
-
 /*Checks whether mmc is present or not*/
 int _app2sd_check_mmc_status(void);
 
@@ -130,13 +121,13 @@ char *_app2sd_find_associated_device_node(const char *loopback_device);
 
 /*This function does the loopback encryption for app*/
 char *_app2sd_do_loopback_encryption_setup(const char *pkgid,
-		const char *loopback_device);
+		const char *loopback_device, uid_t uid);
 
 /*This function detaches the loopback device*/
 char *_app2sd_detach_loop_device(const char *device);
 
 /*This function finds loopback device associated with the app*/
-char *_app2sd_find_associated_device(const char *mmc_app_path);
+char *_app2sd_find_associated_device(const char *loopback_device);
 
 /*This function creates loopback device*/
 int _app2sd_create_loopback_device(const char *pkgid,
@@ -183,17 +174,19 @@ char *_app2sd_find_free_device(void);
 int _app2sd_initialize_db();
 
 /*This function is used to get password from db*/
-char *_app2sd_get_password_from_db(const char *pkgid);
+char *_app2sd_get_password_from_db(const char *pkgid, uid_t uid);
 
 /*This function removes password from db */
-int _app2sd_remove_password_from_db(const char *pkgid);
+int _app2sd_remove_password_from_db(const char *pkgid, uid_t uid);
 
 /* This functions saved password in db */
-int _app2sd_set_password_in_db(const char *pkgid, const char *passwd);
+int _app2sd_set_password_in_db(const char *pkgid, const char *passwd, uid_t uid);
 
 /* This functions make result file */
 void _app2sd_make_result_info_file(char *pkgid, int size, uid_t uid);
 
 int _is_global(uid_t uid);
+
+char *_app2sd_get_encoded_name(const char *pkgid, uid_t uid);
 
 #endif

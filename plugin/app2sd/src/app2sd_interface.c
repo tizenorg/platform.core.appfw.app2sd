@@ -43,22 +43,6 @@ static int __app2sd_create_app2sd_directories(uid_t uid)
 		}
 	}
 
-	if (!_is_global(uid)) {
-		tzplatform_set_user(uid);
-		snprintf(app2sd_user_path, FILENAME_MAX - 1, "%s/%s",
-			APP2SD_PATH, tzplatform_getenv(TZ_USER_NAME));
-		tzplatform_reset_user();
-
-		ret = mkdir(app2sd_user_path, mode);
-		if (ret) {
-			if (errno != EEXIST) {
-				_E("create directory failed," \
-					" error no is (%d)", errno);
-				return APP2EXT_ERROR_CREATE_DIRECTORY;
-			}
-		}
-	}
-
 	return APP2EXT_SUCCESS;
 }
 
@@ -71,6 +55,7 @@ int app2sd_usr_pre_app_install(const char *pkgid, GList* dir_list, int size, uid
 	char *result = NULL;
 	char application_path[FILENAME_MAX] = { 0, };
 	char loopback_device[FILENAME_MAX] = { 0, };
+	char *encoded_id = NULL;
 	int reqd_disk_size = size + ceil(size * 0.2);
 
 	/* validate the function parameter recieved */
@@ -106,19 +91,24 @@ int app2sd_usr_pre_app_install(const char *pkgid, GList* dir_list, int size, uid
 		return APP2EXT_ERROR_MMC_INSUFFICIENT_MEMORY;
 	}
 
+	encoded_id = _app2sd_get_encoded_name(pkgid, uid);
+	if (encoded_id == NULL) {
+		return APP2EXT_ERROR_MEMORY_ALLOC_FAILED;
+	}
 	if (_is_global(uid)) {
 		snprintf(application_path, FILENAME_MAX - 1, "%s/%s",
 			tzplatform_getenv(TZ_SYS_RW_APP), pkgid);
 		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s",
-			APP2SD_PATH, pkgid);
+			APP2SD_PATH, encoded_id);
 	} else {
 		tzplatform_set_user(uid);
 		snprintf(application_path, FILENAME_MAX - 1, "%s/%s",
 			tzplatform_getenv(TZ_USER_APP), pkgid);
-		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s/%s",
-			APP2SD_PATH, tzplatform_getenv(TZ_USER_NAME), pkgid);
+		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s",
+			APP2SD_PATH, encoded_id);
 		tzplatform_reset_user();
 	}
+	free(encoded_id);
 	_D("application_path = (%s)", application_path);
 	_D("loopback_device = (%s)", loopback_device);
 
@@ -150,7 +140,7 @@ int app2sd_usr_pre_app_install(const char *pkgid, GList* dir_list, int size, uid
 
 	/* perform loopback encryption setup */
 	device_node = _app2sd_do_loopback_encryption_setup(pkgid,
-		loopback_device);
+		loopback_device, uid);
 	if (!device_node) {
 		_E("loopback encryption setup failed");
 		_app2sd_delete_loopback_device(loopback_device);
@@ -221,6 +211,7 @@ int app2sd_usr_post_app_install(const char *pkgid,
 	char *device_name = NULL;
 	char application_path[FILENAME_MAX] = { 0, };
 	char loopback_device[FILENAME_MAX] = { 0, };
+	char *encoded_id = NULL;
 	int ret = APP2EXT_SUCCESS;
 	int pkgmgr_ret = 0;
 
@@ -239,19 +230,24 @@ int app2sd_usr_post_app_install(const char *pkgid,
 	}
 	sync();
 
+	encoded_id = _app2sd_get_encoded_name(pkgid, uid);
+	if (encoded_id == NULL) {
+		return APP2EXT_ERROR_MEMORY_ALLOC_FAILED;
+	}
 	if (_is_global(uid)) {
 		snprintf(application_path, FILENAME_MAX - 1, "%s/%s",
 			tzplatform_getenv(TZ_SYS_RW_APP), pkgid);
 		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s",
-			APP2SD_PATH, pkgid);
+			APP2SD_PATH, encoded_id);
 	} else {
 		tzplatform_set_user(uid);
 		snprintf(application_path, FILENAME_MAX - 1, "%s/%s",
 			tzplatform_getenv(TZ_USER_APP), pkgid);
-		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s/%s",
-			APP2SD_PATH, tzplatform_getenv(TZ_USER_NAME), pkgid);
+		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s",
+			APP2SD_PATH, encoded_id);
 		tzplatform_reset_user();
 	}
+	free(encoded_id);
 	_D("application_path = (%s)", application_path);
 	_D("loopback_device = (%s)", loopback_device);
 
@@ -297,7 +293,7 @@ int app2sd_usr_post_app_install(const char *pkgid,
 			_E("unable to delete the loopback device from the SD Card");
 			return APP2EXT_ERROR_DELETE_LOOPBACK_DEVICE;
 		}
-		ret = _app2sd_remove_password_from_db(pkgid);
+		ret = _app2sd_remove_password_from_db(pkgid, uid);
 
 		if (ret)
 			_E("unable to delete the password");
@@ -328,6 +324,7 @@ int app2sd_usr_on_demand_setup_init(const char *pkgid, uid_t uid)
 	int ret = APP2EXT_SUCCESS;
 	char application_path[FILENAME_MAX] = { 0, };
 	char loopback_device[FILENAME_MAX] = { 0, };
+	char *encoded_id = NULL;
 	char *device_node = NULL;
 	char *result = NULL;
 	FILE *fp = NULL;
@@ -345,20 +342,25 @@ int app2sd_usr_on_demand_setup_init(const char *pkgid, uid_t uid)
 		return APP2EXT_ERROR_MMC_STATUS;
 	}
 
+	encoded_id = _app2sd_get_encoded_name(pkgid, uid);
+	if (encoded_id == NULL) {
+		return APP2EXT_ERROR_MEMORY_ALLOC_FAILED;
+	}
 	/* check app entry is there in sd card or not. */
 	if (_is_global(uid)) {
 		snprintf(application_path, FILENAME_MAX - 1, "%s/%s",
 			tzplatform_getenv(TZ_SYS_RW_APP), pkgid);
 		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s",
-			APP2SD_PATH, pkgid);
+			APP2SD_PATH, encoded_id);
 	} else {
 		tzplatform_set_user(uid);
 		snprintf(application_path, FILENAME_MAX - 1, "%s/%s",
 			tzplatform_getenv(TZ_USER_APP), pkgid);
-		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s/%s",
-			APP2SD_PATH, tzplatform_getenv(TZ_USER_NAME), pkgid);
+		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s",
+			APP2SD_PATH, encoded_id);
 		tzplatform_reset_user();
 	}
+	free(encoded_id);
 	_D("application_path = (%s)", application_path);
 	_D("loopback_device = (%s)", loopback_device);
 
@@ -380,7 +382,7 @@ int app2sd_usr_on_demand_setup_init(const char *pkgid, uid_t uid)
 
 	/* do loopback setup */
 	device_node = _app2sd_do_loopback_encryption_setup(pkgid,
-		loopback_device);
+		loopback_device, uid);
 	if (device_node == NULL) {
 		_E("loopback encryption setup failed");
 		return APP2EXT_ERROR_DO_LOSETUP;
@@ -411,6 +413,7 @@ int app2sd_usr_on_demand_setup_exit(const char *pkgid, uid_t uid)
 	int ret = APP2EXT_SUCCESS;
 	char application_path[FILENAME_MAX] = { 0, };
 	char loopback_device[FILENAME_MAX] = { 0, };
+	char *encoded_id = NULL;
 	FILE *fp = NULL;
 
 	/* validate the function parameter recieved */
@@ -426,20 +429,25 @@ int app2sd_usr_on_demand_setup_exit(const char *pkgid, uid_t uid)
 		return APP2EXT_ERROR_MMC_STATUS;
 	}
 
+	encoded_id = _app2sd_get_encoded_name(pkgid, uid);
+	if (encoded_id == NULL) {
+		return APP2EXT_ERROR_MEMORY_ALLOC_FAILED;
+	}
 	/* check app entry is there in sd card or not. */
 	if (_is_global(uid)) {
 		snprintf(application_path, FILENAME_MAX - 1, "%s/%s",
 			tzplatform_getenv(TZ_SYS_RW_APP), pkgid);
 		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s",
-			APP2SD_PATH, pkgid);
+			APP2SD_PATH, encoded_id);
 	} else {
 		tzplatform_set_user(uid);
 		snprintf(application_path, FILENAME_MAX - 1, "%s/%s",
 			tzplatform_getenv(TZ_USER_APP), pkgid);
-		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s/%s",
-			APP2SD_PATH, tzplatform_getenv(TZ_USER_NAME), pkgid);
+		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s",
+			APP2SD_PATH, encoded_id);
 		tzplatform_reset_user();
 	}
+	free(encoded_id);
 	_D("application_path = (%s)", application_path);
 	_D("loopback_device = (%s)", loopback_device);
 
@@ -470,6 +478,7 @@ int app2sd_usr_pre_app_uninstall(const char *pkgid, uid_t uid)
 	int ret = APP2EXT_SUCCESS;
 	char application_path[FILENAME_MAX] = { 0, };
 	char loopback_device[FILENAME_MAX] = { 0, };
+	char *encoded_id = NULL;
 	char *device_node = NULL;
 	FILE *fp = NULL;
 
@@ -488,19 +497,24 @@ int app2sd_usr_pre_app_uninstall(const char *pkgid, uid_t uid)
 		goto END;
 	}
 
+	encoded_id = _app2sd_get_encoded_name(pkgid, uid);
+	if (encoded_id == NULL) {
+		return APP2EXT_ERROR_MEMORY_ALLOC_FAILED;
+	}
 	if (_is_global(uid)) {
 		snprintf(application_path, FILENAME_MAX - 1, "%s/%s",
 			tzplatform_getenv(TZ_SYS_RW_APP), pkgid);
 		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s",
-			APP2SD_PATH, pkgid);
+			APP2SD_PATH, encoded_id);
 	} else {
 		tzplatform_set_user(uid);
 		snprintf(application_path, FILENAME_MAX - 1, "%s/%s",
 			tzplatform_getenv(TZ_USER_APP), pkgid);
-		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s/%s",
-			APP2SD_PATH, tzplatform_getenv(TZ_USER_NAME), pkgid);
+		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s",
+			APP2SD_PATH, encoded_id);
 		tzplatform_reset_user();
 	}
+	free(encoded_id);
 	_D("application_path = (%s)", application_path);
 	_D("loopback_device = (%s)", loopback_device);
 
@@ -518,7 +532,7 @@ int app2sd_usr_pre_app_uninstall(const char *pkgid, uid_t uid)
 	if (NULL == device_node) {
 		/* do loopback setup */
 		device_node = _app2sd_do_loopback_encryption_setup(pkgid,
-			loopback_device);
+			loopback_device, uid);
 		if (device_node == NULL) {
 			_E("loopback encryption setup failed");
 			ret = APP2EXT_ERROR_DO_LOSETUP;
@@ -565,6 +579,7 @@ int app2sd_usr_post_app_uninstall(const char *pkgid, uid_t uid)
 {
 	char application_path[FILENAME_MAX] = { 0, };
 	char loopback_device[FILENAME_MAX] = { 0, };
+	char *encoded_id = NULL;
 	int ret = APP2EXT_SUCCESS;
 
 	/* validate the function parameter recieved */
@@ -582,19 +597,24 @@ int app2sd_usr_post_app_uninstall(const char *pkgid, uid_t uid)
 		goto END;
 	}
 
+	encoded_id = _app2sd_get_encoded_name(pkgid, uid);
+	if (encoded_id == NULL) {
+		return APP2EXT_ERROR_MEMORY_ALLOC_FAILED;
+	}
 	if (_is_global(uid)) {
 		snprintf(application_path, FILENAME_MAX - 1, "%s/%s",
 			tzplatform_getenv(TZ_SYS_RW_APP), pkgid);
 		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s",
-			APP2SD_PATH, pkgid);
+			APP2SD_PATH, encoded_id);
 	} else {
 		tzplatform_set_user(uid);
 		snprintf(application_path, FILENAME_MAX - 1, "%s/%s",
 			tzplatform_getenv(TZ_USER_APP), pkgid);
-		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s/%s",
-			APP2SD_PATH, tzplatform_getenv(TZ_USER_NAME), pkgid);
+		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s",
+			APP2SD_PATH, encoded_id);
 		tzplatform_reset_user();
 	}
+	free(encoded_id);
 	_D("application_path = (%s)", application_path);
 	_D("loopback_device = (%s)", loopback_device);
 
@@ -640,7 +660,7 @@ int app2sd_usr_post_app_uninstall(const char *pkgid, uid_t uid)
 		goto END;
 	}
 
-	ret = _app2sd_remove_password_from_db(pkgid);
+	ret = _app2sd_remove_password_from_db(pkgid, uid);
 	if (ret) {
 		_E("cannot remove password from db");
 		ret = APP2EXT_ERROR_SQLITE_REGISTRY;
@@ -731,10 +751,14 @@ int app2sd_usr_pre_app_upgrade(const char *pkgid, GList* dir_list,
 	int ret = APP2EXT_SUCCESS;
 	char loopback_device[FILENAME_MAX] = { 0, };
 	char application_path[FILENAME_MAX] = { 0, };
-	char temp_pkgid[FILENAME_MAX] = { 0, };
-	char temp_loopback_device[FILENAME_MAX] = { 0, };
-	char temp_application_path[FILENAME_MAX] = { 0, };
+	char temp_uid[32] = { 0, };
+	char *temp_pkgid = NULL;
+	char *temp_loopback_device = NULL;
+	char *temp_application_path = NULL;
 	char *device_node = NULL;
+	char *encoded_id = NULL;
+	char *temp_encoded_id = NULL;
+	int len = 0;
 	unsigned long long curr_size = 0;
 	FILE *fp = NULL;
 	int reqd_disk_size = size + ceil(size * 0.2);
@@ -752,19 +776,24 @@ int app2sd_usr_pre_app_upgrade(const char *pkgid, GList* dir_list,
 		return APP2EXT_ERROR_MMC_STATUS;
 	}
 
+	encoded_id = _app2sd_get_encoded_name(pkgid, uid);
+	if (encoded_id == NULL) {
+		return APP2EXT_ERROR_MEMORY_ALLOC_FAILED;
+	}
 	if (_is_global(uid)) {
 		snprintf(application_path, FILENAME_MAX - 1, "%s/%s",
 			tzplatform_getenv(TZ_SYS_RW_APP), pkgid);
 		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s",
-			APP2SD_PATH, pkgid);
+			APP2SD_PATH, encoded_id);
 	} else {
 		tzplatform_set_user(uid);
 		snprintf(application_path, FILENAME_MAX - 1, "%s/%s",
 			tzplatform_getenv(TZ_USER_APP), pkgid);
-		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s/%s",
-			APP2SD_PATH, tzplatform_getenv(TZ_USER_NAME), pkgid);
+		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s",
+			APP2SD_PATH, encoded_id);
 		tzplatform_reset_user();
 	}
+	free(encoded_id);
 	_D("application_path = (%s)", application_path);
 	_D("loopback_device = (%s)", loopback_device);
 
@@ -784,25 +813,83 @@ int app2sd_usr_pre_app_upgrade(const char *pkgid, GList* dir_list,
 		return APP2EXT_ERROR_LOOPBACK_DEVICE_UNAVAILABLE;
 	}
 	if ((int)curr_size < reqd_disk_size) {
-		snprintf(temp_pkgid, FILENAME_MAX - 1, "%s.new", pkgid);
+		len = strlen(pkgid) + strlen(".new");
+		temp_pkgid = calloc(len + 1, sizeof(char));
+		if (temp_pkgid == NULL) {
+			_E("memory alloc failed");
+			return APP2EXT_ERROR_MEMORY_ALLOC_FAILED;
+		}
+		snprintf(temp_pkgid, len, "%s.new", pkgid);
+
 		if (_is_global(uid)) {
-			snprintf(temp_application_path, FILENAME_MAX - 1,
-				"%s/%s", tzplatform_getenv(TZ_SYS_RW_APP), temp_pkgid);
-			snprintf(temp_loopback_device, FILENAME_MAX - 1,
-				"%s/%s", APP2SD_PATH, temp_pkgid);
+			len = strlen(tzplatform_getenv(TZ_SYS_RW_APP)) + strlen(temp_pkgid) + 1;
+			temp_application_path = calloc(len + 1, sizeof(char));
+			if (temp_application_path == NULL) {
+				_E("memory alloc failed");
+				free(temp_pkgid);
+				return APP2EXT_ERROR_MEMORY_ALLOC_FAILED;
+			}
+			snprintf(temp_application_path, len, "%s/%s",
+				tzplatform_getenv(TZ_SYS_RW_APP), temp_pkgid);
+
+			temp_encoded_id = _app2sd_get_encoded_name((const char *)temp_pkgid, uid);
+			if (temp_encoded_id == NULL) {
+				free(temp_pkgid);
+				free(temp_application_path);
+				return APP2EXT_ERROR_MEMORY_ALLOC_FAILED;
+			}
+			len = strlen(APP2SD_PATH) + strlen(temp_encoded_id) + 1;
+			temp_loopback_device = calloc(len + 1, sizeof(char));
+			if (temp_loopback_device == NULL) {
+				_E("memory alloc failed");
+				free(temp_pkgid);
+				free(temp_application_path);
+				free(temp_encoded_id);
+				return APP2EXT_ERROR_MEMORY_ALLOC_FAILED;
+			}
+			snprintf(temp_loopback_device, len, "%s/%s",
+				APP2SD_PATH, temp_encoded_id);
+			free(temp_encoded_id);
 		} else {
 			tzplatform_set_user(uid);
-			snprintf(temp_application_path, FILENAME_MAX - 1,
-				"%s/%s", tzplatform_getenv(TZ_USER_APP), temp_pkgid);
-			snprintf(temp_loopback_device, FILENAME_MAX - 1,
-				"%s/%s/%s", APP2SD_PATH,
-				tzplatform_getenv(TZ_USER_NAME), temp_pkgid);
+			len = strlen(tzplatform_getenv(TZ_USER_APP)) + strlen(temp_pkgid) + 1;
+			temp_application_path = calloc(len + 1, sizeof(char));
+			if (temp_application_path == NULL) {
+				_E("memory alloc failed");
+				free(temp_pkgid);
+				return APP2EXT_ERROR_MEMORY_ALLOC_FAILED;
+			}
+			snprintf(temp_application_path, len, "%s/%s",
+				tzplatform_getenv(TZ_USER_APP), temp_pkgid);
+
+			temp_encoded_id = _app2sd_get_encoded_name((const char*)temp_pkgid, uid);
+			if (temp_encoded_id == NULL) {
+				free(temp_pkgid);
+				free(temp_application_path);
+				return APP2EXT_ERROR_MEMORY_ALLOC_FAILED;
+			}
+			snprintf(temp_uid, 32, "%d", uid);
+			len = strlen(APP2SD_PATH) + strlen(temp_uid) + strlen(temp_encoded_id) + 2;
+			temp_loopback_device = calloc(len + 1, sizeof(char));
+			if (temp_loopback_device == NULL) {
+				_E("memory alloc failed");
+				free(temp_pkgid);
+				free(temp_application_path);
+				free(temp_encoded_id);
+				return APP2EXT_ERROR_MEMORY_ALLOC_FAILED;
+			}
+			snprintf(temp_loopback_device, len, "%s/%s",
+				APP2SD_PATH, temp_encoded_id);
+			free(temp_encoded_id);
 			tzplatform_reset_user();
 		}
 		ret = _app2sd_update_loopback_device_size(pkgid,
 			loopback_device, application_path, temp_pkgid,
 			temp_loopback_device, temp_application_path,
 			reqd_disk_size, dir_list, uid);
+		free(temp_pkgid);
+		free(temp_application_path);
+		free(temp_loopback_device);
 		if (APP2EXT_SUCCESS != ret) {
 			_E("failed to update loopback device size");
 			return ret;
@@ -814,7 +901,7 @@ int app2sd_usr_pre_app_upgrade(const char *pkgid, GList* dir_list,
 	if (NULL == device_node) {
 		/* do loopback setup */
 		device_node = _app2sd_do_loopback_encryption_setup(pkgid,
-			loopback_device);
+			loopback_device, uid);
 		if (device_node == NULL) {
 			_E("loopback encryption setup failed");
 			return APP2EXT_ERROR_DO_LOSETUP;
@@ -860,6 +947,7 @@ int app2sd_usr_post_app_upgrade(const char *pkgid,
 	char *device_name = NULL;
 	char loopback_device[FILENAME_MAX] = { 0, };
 	char application_path[FILENAME_MAX] = { 0, };
+	char *encoded_id = NULL;
 	int ret = APP2EXT_SUCCESS;
 
 	/* validate the function parameter recieved */
@@ -876,19 +964,24 @@ int app2sd_usr_post_app_upgrade(const char *pkgid,
 		return APP2EXT_ERROR_MMC_STATUS;
 	}
 
+	encoded_id = _app2sd_get_encoded_name(pkgid, uid);
+	if (encoded_id == NULL) {
+		return APP2EXT_ERROR_MEMORY_ALLOC_FAILED;
+	}
 	if (_is_global(uid)) {
 		snprintf(application_path, FILENAME_MAX - 1, "%s/%s",
 			tzplatform_getenv(TZ_SYS_RW_APP), pkgid);
 		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s",
-			APP2SD_PATH, pkgid);
+			APP2SD_PATH, encoded_id);
 	} else {
 		tzplatform_set_user(uid);
 		snprintf(application_path, FILENAME_MAX - 1, "%s/%s",
 			tzplatform_getenv(TZ_USER_APP), pkgid);
-		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s/%s",
-			APP2SD_PATH, tzplatform_getenv(TZ_USER_NAME), pkgid);
+		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s",
+			APP2SD_PATH, encoded_id);
 		tzplatform_reset_user();
 	}
+	free(encoded_id);
 	_D("application_path = (%s)", application_path);
 	_D("loopback_device = (%s)", loopback_device);
 
@@ -931,6 +1024,7 @@ int app2sd_usr_force_clean(const char *pkgid, uid_t uid)
 {
 	char loopback_device[FILENAME_MAX] = { 0, };
 	char application_path[FILENAME_MAX] = { 0, };
+	char *encoded_id = NULL;
 	int ret = APP2EXT_SUCCESS;
 
 	_D("start force_clean [%s]", pkgid);
@@ -943,19 +1037,24 @@ int app2sd_usr_force_clean(const char *pkgid, uid_t uid)
 
 	sync();
 
+	encoded_id = _app2sd_get_encoded_name(pkgid, uid);
+	if (encoded_id == NULL) {
+		return APP2EXT_ERROR_MEMORY_ALLOC_FAILED;
+	}
 	if (_is_global(uid)) {
 		snprintf(application_path, FILENAME_MAX - 1, "%s/%s",
 			tzplatform_getenv(TZ_SYS_RW_APP), pkgid);
 		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s",
-			APP2SD_PATH, pkgid);
+			APP2SD_PATH, encoded_id);
 	} else {
 		tzplatform_set_user(uid);
 		snprintf(application_path, FILENAME_MAX - 1, "%s/%s",
 			tzplatform_getenv(TZ_USER_APP), pkgid);
-		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s/%s",
-			APP2SD_PATH, tzplatform_getenv(TZ_USER_NAME), pkgid);
+		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s",
+			APP2SD_PATH, encoded_id);
 		tzplatform_reset_user();
 	}
+	free(encoded_id);
 	_D("application_path = (%s)", application_path);
 	_D("loopback_device = (%s)", loopback_device);
 
@@ -985,7 +1084,7 @@ int app2sd_usr_force_clean(const char *pkgid, uid_t uid)
 	if (ret) {
 		_E("app2sd db initialize failed");
 	}
-	ret = _app2sd_remove_password_from_db(pkgid);
+	ret = _app2sd_remove_password_from_db(pkgid, uid);
 	if (ret) {
 		_E("cannot remove password from db");
 	}

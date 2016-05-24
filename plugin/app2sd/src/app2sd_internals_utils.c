@@ -646,3 +646,25 @@ char *_app2sd_generate_password(const char *pkgid)
 
 	return ret_result;
 }
+
+char *_app2sd_get_encoded_name(const char *pkgid, uid_t uid)
+{
+	char *new_name = NULL;
+	char *temp_string = NULL;
+	char source_name[FILENAME_MAX] = { 0, };
+	GChecksum *checksum;
+	int len = 0;
+	int i = 0;
+
+	snprintf(source_name, FILENAME_MAX - 1, "%s_%d", pkgid, uid);
+	checksum = g_checksum_new(G_CHECKSUM_MD5);
+	g_checksum_update(checksum, source_name, strlen(source_name));
+	temp_string = (char *)g_checksum_get_string(checksum);
+	_D("temp_string(%s)", temp_string);
+	new_name = strdup(temp_string);
+	g_checksum_free(checksum);
+
+	_D("new_name(%s)", new_name);
+
+	return new_name;
+}
