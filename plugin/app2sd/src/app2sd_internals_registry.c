@@ -55,6 +55,7 @@ int _app2sd_initialize_db()
 	char *error_message = NULL;
 	int ret;
 	FILE * fp = NULL;
+
 	fp = fopen(APP2SD_DB_FILE, "r");
 	if (fp != NULL) {
 		fclose(fp);
@@ -87,18 +88,16 @@ int _app2sd_initialize_db()
 		return -1;
 	}
 
-	_D("db_initialize_done");
-
 	return 0;
 }
 
-int _app2sd_set_password_in_db(const char *pkgid,
-				      const char *passwd)
+int _app2sd_set_password_in_db(const char *pkgid, const char *passwd)
 {
 	char *error_message = NULL;
+	char *query = NULL;
 
-	char *query = sqlite3_mprintf("insert into app2sd(pkgid,password) values (%Q, %Q)",
-		pkgid, passwd);
+	query = sqlite3_mprintf("insert into app2sd" \
+		"(pkgid, password) values (%Q, %Q)", pkgid, passwd);
 
 	if (SQLITE_OK != sqlite3_exec(app2sd_db, query, NULL, NULL,
 		&error_message)) {
@@ -108,7 +107,6 @@ int _app2sd_set_password_in_db(const char *pkgid,
 		return APP2EXT_ERROR_SQLITE_REGISTRY;
 	}
 	sqlite3_free(query);
-	_D("sqlite insertion done");
 
 	return APP2EXT_SUCCESS;
 }
@@ -116,9 +114,10 @@ int _app2sd_set_password_in_db(const char *pkgid,
 int _app2sd_remove_password_from_db(const char *pkgid)
 {
 	char *error_message = NULL;
-	char *query = sqlite3_mprintf("delete from app2sd"
-		" where pkgid LIKE %Q", pkgid);
-	_D("deletion querys is (%s)", query);
+	char *query = NULL;
+
+	query = sqlite3_mprintf("delete from app2sd" \
+		" where pkgid=%Q", pkgid);
 
 	if (SQLITE_OK != sqlite3_exec(app2sd_db, query, NULL,
 		NULL, &error_message)) {
@@ -135,15 +134,14 @@ int _app2sd_remove_password_from_db(const char *pkgid)
 
 char *_app2sd_get_password_from_db(const char *pkgid)
 {
-	char query[MAX_QUERY_LEN] = { 0 };
-	sqlite3_stmt *stmt = NULL;
-	const char *tail = NULL;
-	int rc = 0;
+	char *query = NULL;
 	char *passwd = NULL;
+	const char *tail = NULL;
+	sqlite3_stmt *stmt = NULL;
+	int rc = 0;
 
-	sqlite3_snprintf(MAX_QUERY_LEN, query,
-		"select * from app2sd where pkgid LIKE '%s'", pkgid);
-	_D("access querys is (%s)", query);
+	query = sqlite3_mprintf("select * from app2sd" \
+		" where pkgid=Q", pkgid);
 
 	if (SQLITE_OK != sqlite3_prepare(app2sd_db, query,
 		strlen(query), &stmt, &tail)) {
@@ -163,7 +161,6 @@ char *_app2sd_get_password_from_db(const char *pkgid)
 		goto FINISH_OFF;
 	}
 
-	_D("entry available in sqlite");
 	strncpy(passwd, (const char*)sqlite3_column_text(stmt, 1),
 		PASSWORD_LENGTH);
 	if (passwd == NULL) {
