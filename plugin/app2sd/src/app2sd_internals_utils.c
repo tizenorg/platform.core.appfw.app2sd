@@ -646,3 +646,27 @@ char *_app2sd_generate_password(const char *pkgid)
 
 	return ret_result;
 }
+
+char *_app2sd_get_encoded_name(const char *source_name, uid_t uid)
+{
+	char *new_name = NULL;
+	char temp_name[FILENAME_MAX] ={ 0, };
+	gchar *encoded_value;
+
+	encoded_value = g_compute_checksum_for_string(G_CHECKSUM_MD5,
+		source_name, strlen(source_name));
+
+	snprintf(temp_name, FILENAME_MAX - 1, "%d_%s",
+		uid, (char *)encoded_value);
+	new_name = (char *)calloc(strlen(temp_name), sizeof(char));
+	if (new_name == NULL) {
+		_D("memory alloc failed");
+		g_free(encoded_value);
+		return NULL;
+	}
+
+	g_free(encoded_value);
+	_D("new_name(%s)", new_name);
+
+	return new_name;
+}
