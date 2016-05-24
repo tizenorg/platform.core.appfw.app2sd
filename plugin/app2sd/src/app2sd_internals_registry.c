@@ -92,12 +92,11 @@ int _app2sd_initialize_db()
 	return 0;
 }
 
-int _app2sd_set_password_in_db(const char *pkgid,
-				      const char *passwd)
+int _app2sd_set_password_in_db(const char *pkgid, const char *passwd)
 {
 	char *error_message = NULL;
 
-	char *query = sqlite3_mprintf("insert into app2sd(pkgid,password) values (%Q, %Q)",
+	char *query = sqlite3_mprintf("insert into app2sd(pkgid, password) values (%Q, %Q)",
 		pkgid, passwd);
 
 	if (SQLITE_OK != sqlite3_exec(app2sd_db, query, NULL, NULL,
@@ -140,9 +139,9 @@ char *_app2sd_get_password_from_db(const char *pkgid)
 	const char *tail = NULL;
 	int rc = 0;
 	char *passwd = NULL;
-
 	sqlite3_snprintf(MAX_QUERY_LEN, query,
 		"select * from app2sd where pkgid LIKE '%s'", pkgid);
+
 	_D("access querys is (%s)", query);
 
 	if (SQLITE_OK != sqlite3_prepare(app2sd_db, query,
