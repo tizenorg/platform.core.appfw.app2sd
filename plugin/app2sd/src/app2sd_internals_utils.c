@@ -611,9 +611,9 @@ char *_app2sd_find_free_device(void)
 */
 char *_app2sd_generate_password(const char *pkgid)
 {
-	char passwd[PASSWD_LEN+1] = { 0, };
+	char passwd[PASSWD_LEN + 1] = { 0, };
 	char *ret_result = NULL;
-	char set[ASCII_PASSWD_CHAR+1] =
+	char set[ASCII_PASSWD_CHAR + 1] =
 		"!\"#$%&()*+,-./0123456789:;<=>?@ABCDE" \
 		"FGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
 	unsigned char char_1;
@@ -645,4 +645,26 @@ char *_app2sd_generate_password(const char *pkgid)
 	memcpy(ret_result, passwd, PASSWD_LEN + 1);
 
 	return ret_result;
+}
+
+char *_app2sd_get_encoded_name(const char *pkgid, uid_t uid)
+{
+	char *new_name = NULL;
+	char *temp_string = NULL;
+	char source_name[FILENAME_MAX] = { 0, };
+	GChecksum *checksum;
+	int len = 0;
+	int i = 0;
+
+	snprintf(source_name, FILENAME_MAX - 1, "%s_%d", pkgid, uid);
+	checksum = g_checksum_new(G_CHECKSUM_MD5);
+	g_checksum_update(checksum, source_name, strlen(source_name));
+	temp_string = (char *)g_checksum_get_string(checksum);
+	_D("temp_string(%s)", temp_string);
+	new_name = strdup(temp_string);
+	g_checksum_free(checksum);
+
+	_D("new_name(%s)", new_name);
+
+	return new_name;
 }
