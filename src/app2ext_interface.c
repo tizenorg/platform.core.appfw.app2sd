@@ -21,6 +21,7 @@
 
 #include <app2ext_interface.h>
 #include <errno.h>
+#include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <dlfcn.h>
