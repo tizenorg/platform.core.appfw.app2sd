@@ -21,34 +21,12 @@
  *
  */
 
-#include <sys/xattr.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <string.h>
 #include <dirent.h>
-#include <sys/stat.h>
-#include <stdio.h>
-#include <string.h>
-#include <errno.h>
 #include <openssl/sha.h>
-#include <fcntl.h>
 #include <time.h>
-#include <dlog.h>
-#include <sys/statvfs.h>
 #include <pwd.h>
 
-#include <app2sd_internals.h>
-#include <app2sd_interface.h>
-
-int _is_global(uid_t uid)
-{
-	if (uid == OWNER_ROOT || uid == GLOBAL_USER)
-		return 1;
-	else
-		return 0;
-}
+#include "app2sd_internals.h"
 
 static int _app2sd_setup_path(const char* path, const char *label, uid_t uid)
 {
