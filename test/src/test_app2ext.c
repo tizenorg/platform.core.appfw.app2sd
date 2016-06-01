@@ -29,8 +29,9 @@
 #include <sys/types.h>
 #include <getopt.h>
 #include <unzip.h>
-#include <tzplatform_config.h>
-#include <app2ext_interface.h>
+
+#include "app2ext_interface.h"
+#include "app2ext_utils.h"
 
 #define SUCCESS 0
 #define FAIL 1

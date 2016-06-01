@@ -27,6 +27,7 @@
  * @version 0.5
  * @brief    This file declares API of app2ext library
  */
+
 /**
  * @addtogroup APPLICATION_FRAMEWORK
  * @{
@@ -49,33 +50,7 @@ extern "C" {
 #define API __attribute__ ((visibility("default")))
 #endif
 
-#include <dlog/dlog.h>
 #include <glib.h>
-
-/* for multi-user support */
-#include <tzplatform_config.h>
-
-#ifdef LOG_TAG
-#undef LOG_TAG
-#endif
-
-#define LOG_TAG "APP2EXT"
-
-#define _E(fmt, arg...) LOGE(fmt, ##arg)
-#define _D(fmt, arg...) LOGD(fmt, ##arg)
-#define _W(fmt, arg...) LOGW(fmt, ##arg)
-#define _I(fmt, arg...) LOGI(fmt, ##arg)
-
-#define APP2EXT_SUCCESS 0
-
-#define OWNER_ROOT 0
-#define GLOBAL_USER tzplatform_getuid(TZ_SYS_GLOBALAPP_USER)
-#define MMC_PATH tzplatform_mkpath(TZ_SYS_MEDIA, "SDCardA1")
-#define APP2SD_PATH tzplatform_mkpath(TZ_SYS_MEDIA, "SDCardA1/app2sd")
-
-#define APP2SD_BUS_NAME "org.tizen.app2sd"
-#define APP2SD_OBJECT_PATH "/org/tizen/app2sd"
-#define APP2SD_INTERFACE_NAME "org.tizen.app2sd"
 
 /**
  * Enum for application installation location
@@ -110,7 +85,7 @@ typedef enum app2ext_dir_type_t {
  */
 typedef enum app2ext_move_type_t {
 	APP2EXT_MOVE_TO_EXT = 1,
-	APP2EXT_MOVE_TO_PHONE
+	APP2EXT_MOVE_TO_PHONE,
 } app2ext_move_type;
 
 /**
@@ -318,7 +293,7 @@ typedef int (*app2ext_client_force_clean)(const char *pkgid);
 /**
  * This structure defines the app2ext interfaces. Plugins have to implement these functions
  */
-typedef struct app2ext_interface_t{
+typedef struct app2ext_interface_t {
 	/* for library function */
 	app2ext_client_pre_install		client_pre_install;
 	app2ext_client_post_install		client_post_install;
@@ -361,8 +336,8 @@ typedef struct {
  * type			: permission (rw/ro)
  */
 typedef struct {
-	char *		name;
-	app2ext_dir_type 	type;
+	char			*name;
+	app2ext_dir_type	type;
 } app2ext_dir_details;
 
 /**
@@ -372,36 +347,6 @@ typedef struct {
  *				[Ex: SD card, MicroUSB, Cloud]
  * @return	app2ext_handle pointer if success, NULL if fail
  *
- @code
- #include <app2ext_interface.h>
- app2ext_handle *handle = NULL;
- GLIst *dir_list = NULL;
- handle = app2ext_init(APP2EXT_SD_CARD); //Initializes SD card plug-in
- if(handle)
- {
-	printf("\n SUCCESS");
-	// Perform package install/uninstall/upgrade/move here
-	// Packge install example
-	// Package manager should polulate dir_list with directory structure information of the package
-	ret = handle->interface.pre_install("com.samsung.calculator", dir_list, 20);
-	if (ret) {
-		printf("\n TC : pre app install API fail. Reason %s", error_list[ret]);
-		return -1;
-	}
-
-	// Package manager installs the package
-
-	ret = handle->interface.post_install("com.samsung.calculator", APP2EXT_STATUS_SUCCESS);
-	if (ret) {
-		printf("\n TC : post app install API fail Reason %s", error_list[ret]);
-
-		return -1;
-	}
-	// Package manager should free dir_list
-	return;
- } else
-	 printf("\n FAILURE");
- @endcode
  */
 API app2ext_handle *app2ext_init(int storage_type);
 
@@ -410,21 +355,8 @@ API app2ext_handle *app2ext_init(int storage_type);
  *	    This should be called when use of the plugin is completed
  * @param[in] handle	pointer to app2ext_handle which is to be deinitialized
  * @pre		Initialization is done for the storage handle
- * @return	0 if success,  error code(>0) if fail
+ * @return	0 if success,  error < 0 if fail
  *
- @code
- #include <app2ext_interface.h>
- app2ext_handle *handle = NULL;
- handle = app2ext_init(APP2EXT_SD_CARD); //Initializes SD card plug-in
- int ret = -1;
- ret = app2ext_deinit(handle); // De-initializes the SD plugin
- if(!ret)
- {
-	 printf("\n SUCCESS");
- }
- else
- printf("\n FAILURE");
- @endcode
  */
 API int app2ext_deinit(app2ext_handle *handle);
 
@@ -434,8 +366,9 @@ API int app2ext_deinit(app2ext_handle *handle);
  * @param[in] pkgid	package id
  * @param[in] uid	target user id of this instruction
  * @return	APP2EXT_SD_CARD if pkg is in SD card,
- *		APP2EXT_INTERNAL_MEM if app is in internal memory
- *		error code(>0) if fail
+ *		APP2EXT_INTERNAL_MEM if pkg is in internal memory,
+ *		APP2EXT_NOT_INSTALLED if there is no valid pkg path
+ *		error < 0 if fail
  *@remarks see app2ext_install_location for more details
  */
 API int app2ext_get_app_location(const char *pkgid);
