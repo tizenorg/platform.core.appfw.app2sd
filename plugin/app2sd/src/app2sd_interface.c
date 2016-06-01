@@ -21,12 +21,9 @@
  *
  */
 
-#include <app2sd_internals.h>
-#include <app2sd_interface.h>
-#include <errno.h>
-#include <sys/types.h>
-#include <sys/wait.h>
 #include <pkgmgr-info.h>
+
+#include "app2sd_internals.h"
 
 static int __app2sd_create_app2sd_directories(uid_t uid)
 {

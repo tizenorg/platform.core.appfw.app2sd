@@ -21,21 +21,10 @@
  *
  */
 
-#include <app2sd_internals.h>
-#include <app2sd_interface.h>
-
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/types.h>
 #include <dirent.h>
-#include <sys/stat.h>
 #include <time.h>
-#include <dlog.h>
-#include <sys/statvfs.h>
-#include <errno.h>
+
+#include "app2sd_internals.h"
 
 #define	PASSWD_LEN		21
 #define	ASCII_PASSWD_CHAR	93
@@ -645,24 +634,4 @@ char *_app2sd_generate_password(const char *pkgid)
 	memcpy(ret_result, passwd, PASSWD_LEN + 1);
 
 	return ret_result;
-}
-
-char *_app2sd_get_encoded_name(const char *pkgid, uid_t uid)
-{
-	char *new_name = NULL;
-	char *temp_string = NULL;
-	char source_name[FILENAME_MAX] = { 0, };
-	GChecksum *checksum;
-
-	snprintf(source_name, FILENAME_MAX - 1, "%s_%d", pkgid, uid);
-	checksum = g_checksum_new(G_CHECKSUM_MD5);
-	g_checksum_update(checksum, (const guchar *)source_name, strlen(source_name));
-	temp_string = (char *)g_checksum_get_string(checksum);
-	_D("temp_string(%s)", temp_string);
-	new_name = strdup(temp_string);
-	g_checksum_free(checksum);
-
-	_D("new_name(%s)", new_name);
-
-	return new_name;
 }

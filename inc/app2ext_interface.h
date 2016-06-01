@@ -49,11 +49,7 @@ extern "C" {
 #define API __attribute__ ((visibility("default")))
 #endif
 
-#include <dlog/dlog.h>
-#include <glib.h>
-
-/* for multi-user support */
-#include <tzplatform_config.h>
+#include "app2ext_utils.h"
 
 #ifdef LOG_TAG
 #undef LOG_TAG
@@ -61,15 +57,8 @@ extern "C" {
 
 #define LOG_TAG "APP2EXT"
 
-#define _E(fmt, arg...) LOGE(fmt, ##arg)
-#define _D(fmt, arg...) LOGD(fmt, ##arg)
-#define _W(fmt, arg...) LOGW(fmt, ##arg)
-#define _I(fmt, arg...) LOGI(fmt, ##arg)
-
 #define APP2EXT_SUCCESS 0
 
-#define OWNER_ROOT 0
-#define GLOBAL_USER tzplatform_getuid(TZ_SYS_GLOBALAPP_USER)
 #define MMC_PATH tzplatform_mkpath(TZ_SYS_MEDIA, "SDCardA1")
 #define APP2SD_PATH tzplatform_mkpath(TZ_SYS_MEDIA, "SDCardA1/app2sd")
 

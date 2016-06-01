@@ -28,7 +28,7 @@
 extern "C" {
 #endif
 
-#include <app2ext_interface.h>
+#include "app2ext_interface.h"
 
 int app2sd_usr_pre_app_install(const char *pkgid,
 		GList* dir_list, int size, uid_t uid);

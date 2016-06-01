@@ -17,10 +17,9 @@
  *
  */
 
-#include <app2sd_internals.h>
-#include <app2sd_interface.h>
-#include <glib.h>
 #include <gio/gio.h>
+
+#include "app2sd_internals.h"
 
 GMainLoop *app2sd_mainloop = NULL;
 

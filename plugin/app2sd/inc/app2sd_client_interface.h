@@ -50,7 +50,7 @@
 extern "C" {
 #endif
 
-#include <app2ext_interface.h>
+#include "app2ext_interface.h"
 
 /**
  * @brief : This API prepares the setup for installation in SD card.

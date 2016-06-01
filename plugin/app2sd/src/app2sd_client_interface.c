@@ -24,9 +24,9 @@
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <glib.h>
 #include <gio/gio.h>
-#include <app2sd_client_interface.h>
+
+#include "app2sd_client_interface.h"
 
 static int app2sd_gdbus_shared_connection(GDBusConnection **connection)
 {
