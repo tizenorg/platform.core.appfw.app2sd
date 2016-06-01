@@ -34,20 +34,23 @@
 
 /*Include Headers*/
 #include <stdio.h>
+#include <stdlib.h>
 #include <fcntl.h>
-#include <errno.h>
 #include <string.h>
 #include <stdarg.h>
 #include <dirent.h>
 #include <unistd.h>
-#include <malloc.h>
-#include <stdlib.h>
 #include <sys/stat.h>
+#include <sys/statvfs.h>
 #include <sys/types.h>
-#include <errno.h>
 #include <sys/mount.h>
-#include <app2sd_interface.h>
+#include <sys/wait.h>
+#include <sys/xattr.h>
+#include <malloc.h>
 #include <math.h>
+#include <errno.h>
+
+#include "app2sd_interface.h"
 
 #define DIR_PERMS (S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH)
 
@@ -184,9 +187,5 @@ int _app2sd_set_password_in_db(const char *pkgid, const char *passwd);
 
 /* This functions make result file */
 void _app2sd_make_result_info_file(char *pkgid, int size, uid_t uid);
-
-int _is_global(uid_t uid);
-
-char *_app2sd_get_encoded_name(const char *pkgid, uid_t uid);
 
 #endif

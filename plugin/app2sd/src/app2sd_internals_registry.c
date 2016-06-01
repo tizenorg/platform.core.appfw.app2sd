@@ -21,20 +21,11 @@
  *
  */
 
-#include <app2sd_internals.h>
-#include <app2sd_interface.h>
-
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <sys/types.h>
 #include <dirent.h>
-#include <sys/stat.h>
-#include <dlog.h>
 #include <time.h>
 #include <db-util.h>
-#include <tzplatform_config.h>
+
+#include "app2sd_internals.h"
 
 #define MAX_QUERY_LEN 4096
 #define PASSWORD_LENGTH 64

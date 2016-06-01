@@ -20,10 +20,10 @@ SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${EXTRA_CFLAGS}")
 
 ### Local include directories
 INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/inc
-		${CMAKE_SOURCE_DIR}/src)
+	${CMAKE_SOURCE_DIR}/common/inc
+	${CMAKE_SOURCE_DIR}/plugin/app2sd/inc)
 
 SET(app2sd_dir "${CMAKE_SOURCE_DIR}/plugin/app2sd")
-SET(app2sd_inc_dir "${app2sd_dir}/inc")
 SET(app2sd_src_dir "${app2sd_dir}/src")
 
 ## build app2sd library
@@ -31,7 +31,7 @@ SET(APP2SD "app2sd")
 SET(libapp2sd_SOURCES
 	${app2sd_src_dir}/app2sd_client_interface.c)
 SET(libapp2sd_LDFLAGS " -L${LIB_INSTALL_DIR} -lcrypto -module -avoid-version ")
-SET(libapp2sd_CFLAGS  " ${CFLAGS} -fPIC -I${app2sd_inc_dir} ")
+SET(libapp2sd_CFLAGS  " ${CFLAGS} -fPIC ")
 
 ADD_LIBRARY(${APP2SD} SHARED ${libapp2sd_SOURCES})
 SET_TARGET_PROPERTIES(${APP2SD} PROPERTIES SOVERSION ${VERSION_MAJOR})
@@ -53,9 +53,10 @@ SET(app2sd_server_SOURCES
 	${app2sd_src_dir}/app2sd_interface.c
 	${app2sd_src_dir}/app2sd_internals_registry.c
 	${app2sd_src_dir}/app2sd_internals_utils.c
-	${app2sd_src_dir}/app2sd_server.c)
+	${app2sd_src_dir}/app2sd_server.c
+	${CMAKE_SOURCE_DIR}/common/src/app2ext_utils.c)
 ADD_EXECUTABLE(${APP2SD_SERVER} ${app2sd_server_SOURCES})
-SET_TARGET_PROPERTIES(${APP2SD_SERVER} PROPERTIES COMPILE_FLAGS ${CFLAGS} "-fPIE -I${app2sd_inc_dir} ")
+SET_TARGET_PROPERTIES(${APP2SD_SERVER} PROPERTIES COMPILE_FLAGS ${CFLAGS} "-fPIE ")
 SET_TARGET_PROPERTIES(${APP2SD_SERVER} PROPERTIES LINK_FLAGS "-pie")
 TARGET_LINK_LIBRARIES(${APP2SD_SERVER} app2sd ${pkgs_LDFLAGS})
 
