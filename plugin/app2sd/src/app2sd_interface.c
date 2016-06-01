@@ -21,12 +21,9 @@
  *
  */
 
-#include <app2sd_internals.h>
-#include <app2sd_interface.h>
-#include <errno.h>
-#include <sys/types.h>
-#include <sys/wait.h>
 #include <pkgmgr-info.h>
+
+#include "app2sd_internals.h"
 
 static int __app2sd_create_app2sd_directories(uid_t uid)
 {
@@ -108,8 +105,6 @@ int app2sd_usr_pre_app_install(const char *pkgid, GList* dir_list, int size, uid
 		tzplatform_reset_user();
 	}
 	free(encoded_id);
-	_D("application_path = (%s)", application_path);
-	_D("loopback_device = (%s)", loopback_device);
 
 	ret = __app2sd_create_app2sd_directories(uid);
 	if (ret) {
@@ -247,8 +242,6 @@ int app2sd_usr_post_app_install(const char *pkgid,
 		tzplatform_reset_user();
 	}
 	free(encoded_id);
-	_D("application_path = (%s)", application_path);
-	_D("loopback_device = (%s)", loopback_device);
 
 	/* get the associated device node for SD card applicationer */
 	device_name = _app2sd_find_associated_device_node(loopback_device);
@@ -360,8 +353,6 @@ int app2sd_usr_on_demand_setup_init(const char *pkgid, uid_t uid)
 		tzplatform_reset_user();
 	}
 	free(encoded_id);
-	_D("application_path = (%s)", application_path);
-	_D("loopback_device = (%s)", loopback_device);
 
 	fp = fopen(loopback_device, "r+");
 	if (fp == NULL) {
@@ -447,8 +438,6 @@ int app2sd_usr_on_demand_setup_exit(const char *pkgid, uid_t uid)
 		tzplatform_reset_user();
 	}
 	free(encoded_id);
-	_D("application_path = (%s)", application_path);
-	_D("loopback_device = (%s)", loopback_device);
 
 	fp = fopen(loopback_device, "r+");
 	if (fp == NULL) {
@@ -514,8 +503,6 @@ int app2sd_usr_pre_app_uninstall(const char *pkgid, uid_t uid)
 		tzplatform_reset_user();
 	}
 	free(encoded_id);
-	_D("application_path = (%s)", application_path);
-	_D("loopback_device = (%s)", loopback_device);
 
 	/* check app entry is there in sd card or not. */
 	fp = fopen(loopback_device, "r+");
@@ -614,8 +601,6 @@ int app2sd_usr_post_app_uninstall(const char *pkgid, uid_t uid)
 		tzplatform_reset_user();
 	}
 	free(encoded_id);
-	_D("application_path = (%s)", application_path);
-	_D("loopback_device = (%s)", loopback_device);
 
 	/* unmount the loopback encrypted pseudo device from
 	 * the application installation path
@@ -793,8 +778,6 @@ int app2sd_usr_pre_app_upgrade(const char *pkgid, GList* dir_list,
 		tzplatform_reset_user();
 	}
 	free(encoded_id);
-	_D("application_path = (%s)", application_path);
-	_D("loopback_device = (%s)", loopback_device);
 
 	/* check app entry is there in sd card or not. */
 	fp = fopen(loopback_device, "r+");
@@ -981,8 +964,6 @@ int app2sd_usr_post_app_upgrade(const char *pkgid,
 		tzplatform_reset_user();
 	}
 	free(encoded_id);
-	_D("application_path = (%s)", application_path);
-	_D("loopback_device = (%s)", loopback_device);
 
 	/* get the associated device node for SD card applicationer */
 	device_name = _app2sd_find_associated_device_node(loopback_device);
@@ -1026,8 +1007,6 @@ int app2sd_usr_force_clean(const char *pkgid, uid_t uid)
 	char *encoded_id = NULL;
 	int ret = APP2EXT_SUCCESS;
 
-	_D("start force_clean [%s]", pkgid);
-
 	/* validate the function parameter recieved */
 	if (pkgid == NULL) {
 		_E("invalid func parameters");
@@ -1054,8 +1033,6 @@ int app2sd_usr_force_clean(const char *pkgid, uid_t uid)
 		tzplatform_reset_user();
 	}
 	free(encoded_id);
-	_D("application_path = (%s)", application_path);
-	_D("loopback_device = (%s)", loopback_device);
 
 	/* unmount the loopback encrypted pseudo device from the application installation path */
 	ret = _app2sd_unmount_app_content(application_path);
@@ -1087,8 +1064,6 @@ int app2sd_usr_force_clean(const char *pkgid, uid_t uid)
 	if (ret) {
 		_E("cannot remove password from db");
 	}
-
-	_D("finish force_clean");
 
 	return 0;
 }
