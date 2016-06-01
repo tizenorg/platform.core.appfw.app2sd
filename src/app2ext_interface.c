@@ -19,7 +19,6 @@
  *
  */
 
-#include <app2ext_interface.h>
 #include <errno.h>
 #include <unistd.h>
 #include <sys/types.h>
@@ -30,15 +29,10 @@
 #include <stdio.h>
 #include <dirent.h>
 
-#define APP2EXT_SD_PLUGIN_PATH	LIBPREFIX "/libapp2sd.so"
+#include "app2ext_interface.h"
+#include "app2ext_utils.h"
 
-int _is_global(uid_t uid)
-{
-	if (uid == OWNER_ROOT || uid == GLOBAL_USER)
-		return 1;
-	else
-		return 0;
-}
+#define APP2EXT_SD_PLUGIN_PATH	LIBPREFIX "/libapp2sd.so"
 
 app2ext_handle *app2ext_init(int storage_type)
 {
@@ -117,6 +111,7 @@ int app2ext_usr_get_app_location(const char *pkgid, uid_t uid)
 	char loopback_device[FILENAME_MAX] = { 0, };
 	char application_path[FILENAME_MAX] = { 0, };
 	char application_mmc_path[FILENAME_MAX] = { 0, };
+	char *encoded_id = NULL;
 
 	/* validate the function parameter received */
 	if (pkgid == NULL) {
@@ -129,23 +124,23 @@ int app2ext_usr_get_app_location(const char *pkgid, uid_t uid)
 			tzplatform_getenv(TZ_SYS_RW_APP), pkgid);
 		snprintf(application_mmc_path, FILENAME_MAX - 1, "%s/%s/.mmc",
 			tzplatform_getenv(TZ_SYS_RW_APP), pkgid);
-		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s",
-			APP2SD_PATH, pkgid);
 	} else {
 		tzplatform_set_user(uid);
 		snprintf(application_path, FILENAME_MAX - 1, "%s/%s",
 			tzplatform_getenv(TZ_USER_APP), pkgid);
 		snprintf(application_mmc_path, FILENAME_MAX - 1, "%s/%s/.mmc",
 			tzplatform_getenv(TZ_USER_APP), pkgid);
-		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s/%s",
-			APP2SD_PATH, tzplatform_getenv(TZ_USER_NAME), pkgid);
 		tzplatform_reset_user();
 	}
-	_D("application_path = (%s)", application_path);
-	_D("application_mmc_path = (%s)", application_mmc_path);
-	_D("loopback_device = (%s)", loopback_device);
+	encoded_id = _app2sd_get_encoded_name(pkgid, uid);
+	if (encoded_id == NULL) {
+		return -1;
+	}
+	snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s",
+		APP2SD_PATH, encoded_id);
+	free(encoded_id);
 
-	/*check whether application is in external memory or not */
+	/* check whether application is in external memory or not */
 	fp = fopen(loopback_device, "r");
 	if (fp != NULL) {
 		fclose(fp);
@@ -154,7 +149,7 @@ int app2ext_usr_get_app_location(const char *pkgid, uid_t uid)
 		return APP2EXT_SD_CARD;
 	}
 
-	/*check whether application is in internal or not */
+	/* check whether application is in internal or not */
 	fp = fopen(application_path, "r");
 	if (fp == NULL) {
 		_D("app_dir_path open failed, " \
@@ -177,6 +172,7 @@ int app2ext_usr_get_app_location(const char *pkgid, uid_t uid)
 		}
 	}
 }
+
 int app2ext_get_app_location(const char *pkgid)
 {
 	int ret = 0;
@@ -191,6 +187,7 @@ int app2ext_usr_enable_external_pkg(const char *pkgid, uid_t uid)
 	FILE *fp = NULL;
 	app2ext_handle *app2_handle = NULL;
 	char loopback_device[FILENAME_MAX] = { 0, };
+	char *encoded_id = NULL;
 
 	/* validate the function parameter received */
 	if (pkgid == NULL) {
@@ -198,17 +195,13 @@ int app2ext_usr_enable_external_pkg(const char *pkgid, uid_t uid)
 		return -1;
 	}
 
-	if (_is_global(uid)) {
-		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s",
-			APP2SD_PATH, pkgid);
-	} else {
-		tzplatform_set_user(uid);
-		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s/%s",
-			APP2SD_PATH, tzplatform_getenv(TZ_USER_NAME), pkgid);
-		tzplatform_reset_user();
+	encoded_id = _app2sd_get_encoded_name(pkgid, uid);
+	if (encoded_id == NULL) {
+		return -1;
 	}
-
-	_D("loopback_device = (%s)", loopback_device);
+	snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s",
+		APP2SD_PATH, encoded_id);
+	free(encoded_id);
 
 	/* check whether application is in external memory or not */
 	fp = fopen(loopback_device, "r");
@@ -225,8 +218,10 @@ int app2ext_usr_enable_external_pkg(const char *pkgid, uid_t uid)
 		app2_handle->interface.client_usr_enable(pkgid, uid);
 		app2ext_deinit(app2_handle);
 	}
+
 	return 0;
 }
+
 int app2ext_enable_external_pkg(const char *pkgid)
 {
 	int ret = 0;
@@ -241,6 +236,7 @@ int app2ext_usr_disable_external_pkg(const char *pkgid, uid_t uid)
 	FILE *fp = NULL;
 	app2ext_handle *app2_handle = NULL;
 	char loopback_device[FILENAME_MAX] = { 0, };
+	char *encoded_id = NULL;
 
 	/* validate the function parameter received */
 	if (pkgid == NULL) {
@@ -248,17 +244,13 @@ int app2ext_usr_disable_external_pkg(const char *pkgid, uid_t uid)
 		return -1;
 	}
 
-	if (_is_global(uid)) {
-		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s",
-			APP2SD_PATH, pkgid);
-	} else {
-		tzplatform_set_user(uid);
-		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s/%s",
-			APP2SD_PATH, tzplatform_getenv(TZ_USER_NAME), pkgid);
-		tzplatform_reset_user();
+	encoded_id = _app2sd_get_encoded_name(pkgid, uid);
+	if (encoded_id == NULL) {
+		return -1;
 	}
-
-	_D("loopback_device = (%s)", loopback_device);
+	snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s",
+		APP2SD_PATH, encoded_id);
+	free(encoded_id);
 
 	/* check whether application is in external memory or not */
 	fp = fopen(loopback_device, "r");
@@ -278,6 +270,7 @@ int app2ext_usr_disable_external_pkg(const char *pkgid, uid_t uid)
 
 	return 0;
 }
+
 int app2ext_disable_external_pkg(const char *pkgid)
 {
 	int ret = 0;
@@ -308,7 +301,6 @@ int app2ext_usr_force_clean_pkg(const char *pkgid, uid_t uid)
 			tzplatform_getenv(TZ_USER_APP), pkgid);
 		tzplatform_reset_user();
 	}
-	_D("application_mmc_path = (%s)", application_mmc_path);
 
 	fp = fopen(application_mmc_path, "r");
 	if (fp == NULL) {
@@ -328,6 +320,7 @@ int app2ext_usr_force_clean_pkg(const char *pkgid, uid_t uid)
 
 	return 0;
 }
+
 int app2ext_force_clean_pkg(const char *pkgid)
 {
 	int ret = 0;

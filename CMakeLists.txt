@@ -25,16 +25,18 @@ ENDFOREACH(flag)
 SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${EXTRA_CFLAGS}")
 
 ### Local include directories
-INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/inc ${CMAKE_SOURCE_DIR}/src)
+INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/inc
+	${CMAKE_SOURCE_DIR}/common/inc)
 
 ## build app2ext library
 SET(app2ext_dir "${CMAKE_SOURCE_DIR}")
-SET(app2ext_inc_dir "${app2ext_dir}/inc")
 SET(app2ext_src_dir "${app2ext_dir}/src")
 SET(APP2EXT "app2ext")
-SET(libapp2ext_SOURCES ${app2ext_src_dir}/app2ext_interface.c)
+SET(libapp2ext_SOURCES
+	${app2ext_src_dir}/app2ext_interface.c
+	${CMAKE_SOURCE_DIR}/common/src/app2ext_utils.c)
 SET(libapp2ext_LDFLAGS " -L${LIB_INSTALL_DIR} -module -avoid-version -ldl ")
-SET(libapp2ext_CFLAGS  " ${CFLAGS} -fPIC -I${app2ext_inc_dir} ")
+SET(libapp2ext_CFLAGS  " ${CFLAGS} -fPIC ")
 
 ADD_DEFINITIONS("-DLIBPREFIX=\"${LIB_INSTALL_DIR}\"")
 
