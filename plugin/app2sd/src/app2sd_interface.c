@@ -666,8 +666,7 @@ int app2sd_usr_move_installed_app(const char *pkgid, GList* dir_list,
 		|| move_type < APP2EXT_MOVE_TO_EXT
 		|| move_type > APP2EXT_MOVE_TO_PHONE) {
 		_E("invalid function arguments");
-		ret = APP2EXT_ERROR_INVALID_ARGUMENTS;
-		goto END;
+		return APP2EXT_ERROR_INVALID_ARGUMENTS;
 	}
 
 	pkgmgrinfo_pkginfo_h info_handle = NULL;
@@ -676,21 +675,21 @@ int app2sd_usr_move_installed_app(const char *pkgid, GList* dir_list,
 	if (pkgmgr_ret < 0) {
 		_E("failed to get pkginfo for pkg(%s), uid(%d), pkgmgr_ret(%d)",
 			pkgid, uid, pkgmgr_ret);
+		return APP2EXT_ERROR_PKGMGR_ERROR;
 	}
 	pkgmgr_ret = pkgmgrinfo_pkginfo_get_installed_storage(info_handle, &storage);
 	if (pkgmgr_ret < 0) {
 		_E("failed to get installed storage for pkg(%s) of uid(%d), pkgmgr_ret(%d)",
 			pkgid, uid, pkgmgr_ret);
 		pkgmgrinfo_pkginfo_destroy_pkginfo(info_handle);
-		goto END;
+		return APP2EXT_ERROR_PKGMGR_ERROR;
 	}
 
 	if ((move_type == APP2EXT_MOVE_TO_EXT && storage == PMINFO_EXTERNAL_STORAGE)
 		|| (move_type == APP2EXT_MOVE_TO_PHONE && storage == PMINFO_INTERNAL_STORAGE)) {
-			ret = APP2EXT_ERROR_PKG_EXISTS;
 			_E("PKG_EXISTS in [%d] STORAGE", storage);
 			pkgmgrinfo_pkginfo_destroy_pkginfo(info_handle);
-			goto END;
+			return APP2EXT_ERROR_PKG_EXISTS;
 	} else {
 		_D("pkgid[%s] move to STORAGE [%d]", pkgid, storage);
 	}
@@ -699,7 +698,7 @@ int app2sd_usr_move_installed_app(const char *pkgid, GList* dir_list,
 	ret = _app2sd_usr_move_app(pkgid, move_type, dir_list, uid);
 	if (ret) {
 		_D("unable to move application");
-		goto END;
+		return ret;
 	}
 
 	/* if move is completed, then update installed storage to pkgmgr_parser db */
@@ -723,10 +722,7 @@ int app2sd_usr_move_installed_app(const char *pkgid, GList* dir_list,
 		}
 	}
 
-END:
-	_app2sd_make_result_info_file((char*)pkgid, ret, uid);
-
-	return ret;
+	return APP2EXT_SUCCESS;
 }
 
 int app2sd_usr_pre_app_upgrade(const char *pkgid, GList* dir_list,

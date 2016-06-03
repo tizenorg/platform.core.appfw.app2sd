@@ -34,6 +34,20 @@ static int _app2sd_setup_path(const char* path, const char *label, uid_t uid)
 	struct passwd pwd;
 	struct passwd *pwd_result;
 	char buf[1024] = { 0, };
+	int fd;
+
+	fd = open(path, O_RDONLY);
+	if (fd < 0) {
+		_E("can't open path(%s)", path);
+		return APP2EXT_ERROR_OPEN_DIR;
+	}
+	ret = fchmod(fd, 0755);
+	if (ret < 0) {
+		_E("change file permission error");
+		close(fd);
+		return APP2EXT_ERROR_ACCESS_FILE;
+	}
+	close(fd);
 
 	ret = lsetxattr(path, "security.SMACK64TRANSMUTE", "TRUE", 4, 0);
 	if (ret < 0) {
@@ -43,11 +57,6 @@ static int _app2sd_setup_path(const char* path, const char *label, uid_t uid)
 	ret = lsetxattr(path, "security.SMACK64", label, strlen(label), 0);
 	if (ret < 0) {
 		_E("set label(%s) error", label);
-		return APP2EXT_ERROR_ACCESS_FILE;
-	}
-	ret = chmod(path, 0755);
-	if (ret < 0) {
-		_E("change file permission error");
 		return APP2EXT_ERROR_ACCESS_FILE;
 	}
 
@@ -1486,56 +1495,4 @@ FINISH_OFF:
 	}
 
 	return err_res;
-}
-
-void _app2sd_make_result_info_file(char *pkgid, int size, uid_t uid)
-{
-	int ret = 0;
-	FILE* file = NULL;
-	int fd = 0;
-	char buf[FILENAME_MAX] = {0};
-	const char* app_info_label = "*";
-	char info_file[FILENAME_MAX] = {'\0', };
-	struct passwd pwd;
-	struct passwd *pwd_result;
-
-	if(pkgid == NULL)
-		return;
-
-	snprintf(info_file, FILENAME_MAX - 1, "/tmp/%s", pkgid);
-	_D("file path = %s", info_file);
-
-	file = fopen(info_file, "w");
-	if (file == NULL) {
-		_E("couldn't open the file (%s)", info_file);
-		return;
-	}
-
-	snprintf(buf, FILENAME_MAX - 1, "%d\n", size);
-	fwrite(buf, 1, strlen(buf), file);
-
-	fflush(file);
-	fd = fileno(file);
-	fsync(fd);
-	fclose(file);
-
-	if(lsetxattr(info_file, "security.SMACK64", app_info_label, strlen(app_info_label), 0)) {
-		_E("error(%d) in setting smack label", errno);
-	}
-
-	ret = chmod(info_file, 0755);
-	if (ret == -1) {
-		return;
-	}
-
-	memset(buf, '\0', FILENAME_MAX);
-	ret = getpwuid_r(uid, &pwd, buf, FILENAME_MAX, &pwd_result);
-	if (ret != 0 || pwd_result == NULL) {
-		_E("get uid failed(%d)", ret);
-	}
-
-	ret = chown(info_file, uid, pwd.pw_gid);
-	if (ret == -1) {
-		return;
-	}
 }
