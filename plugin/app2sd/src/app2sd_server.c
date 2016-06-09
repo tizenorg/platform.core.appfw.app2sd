@@ -166,6 +166,11 @@ static const gchar introspection_xml[] =
 "			<arg type='i' name='uid' direction='in'/>"
 "			<arg type='i' name='result' direction='out'/>"
 "		</method>"
+"		<method name='ForceClean'>"
+"			<arg type='s' name='pkgid' direction='in'/>"
+"			<arg type='i' name='uid' direction='in'/>"
+"			<arg type='i' name='result' direction='out'/>"
+"		</method>"
 "	</interface>"
 "</node>";
 
@@ -563,6 +568,37 @@ static void _app2sd_server_move_installed_app(GDBusConnection *connection, const
 	g_dbus_method_invocation_return_value(invocation, param);
 }
 
+static void _app2sd_server_ondemand_force_clean(GDBusConnection *connection, const gchar *sender,
+	GVariant *parameters, GDBusMethodInvocation *invocation, uid_t sender_uid)
+{
+	GVariant *param = NULL;
+	int result = APP2EXT_SUCCESS;
+	char *pkgid = NULL;
+	uid_t target_uid = -1;
+	int ret = 0;
+
+	g_variant_get(parameters, "(&si)", &pkgid, &target_uid);
+
+	_D("pkgid(%s), sender_uid(%d), target_uid(%d)",
+		pkgid, sender_uid, target_uid);
+
+	if (sender_uid != 0 && sender_uid != target_uid) {
+		_E("Not permitted user!");
+		_app2sd_server_return_method_error(invocation,
+			APP2EXT_ERROR_OPERATION_NOT_PERMITTED);
+		return;
+	}
+
+	ret = app2sd_usr_force_clean(pkgid, target_uid);
+	if (ret) {
+		_E("error(%d)", ret);
+		result = ret;
+	}
+
+	param = g_variant_new("(i)", result);
+	g_dbus_method_invocation_return_value(invocation, param);
+}
+
 static void handle_method_call(GDBusConnection *connection,
 	const gchar *sender, const gchar *object_path,
 	const gchar *interface_name, const gchar *method_name,
@@ -599,6 +635,9 @@ static void handle_method_call(GDBusConnection *connection,
 			parameters, invocation, sender_uid);
 	} else if (g_strcmp0(method_name, "MoveInstalledApp") == 0) {
 		_app2sd_server_move_installed_app(connection, sender,
+			parameters, invocation, sender_uid);
+	} else if (g_strcmp0(method_name, "ForceClean") == 0) {
+		_app2sd_server_ondemand_force_clean(connection, sender,
 			parameters, invocation, sender_uid);
 	}
 
