@@ -282,7 +282,6 @@ int app2ext_disable_external_pkg(const char *pkgid)
 
 int app2ext_usr_force_clean_pkg(const char *pkgid, uid_t uid)
 {
-	FILE *fp = NULL;
 	app2ext_handle *app2_handle = NULL;
 
 	/* validate the function parameter received */

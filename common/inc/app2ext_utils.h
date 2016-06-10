@@ -34,6 +34,7 @@ extern "C" {
 
 #include <dlog.h>
 #include <glib.h>
+#include <sys/stat.h>
 #include <tzplatform_config.h>
 
 #define _E(fmt, arg...) LOGE(fmt, ##arg)
@@ -57,6 +58,8 @@ extern "C" {
 #define APP2SD_BUS_NAME "org.tizen.app2sd"
 #define APP2SD_OBJECT_PATH "/org/tizen/app2sd"
 #define APP2SD_INTERFACE_NAME "org.tizen.app2sd"
+
+#define DIR_PERMS (S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH)
 
 int _is_global(uid_t uid);
 char *_app2sd_get_encoded_name(const char *pkgid, uid_t uid);

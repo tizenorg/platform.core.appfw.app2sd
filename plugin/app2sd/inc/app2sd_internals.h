@@ -52,8 +52,6 @@
 
 #include "app2sd_interface.h"
 
-#define DIR_PERMS (S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH)
-
 #define BUF_SIZE 256
 #define MEM_BUF_SIZE 	5	/*Memory buffer size in MB*/
 #define PKG_BUF_SIZE 	2	/*Memory buffer size in MB*/
@@ -71,19 +69,6 @@ typedef enum mount_type_t {
 	MOUNT_TYPE_RD_REMOUNT,
 	MOUNT_TYPE_RW_REMOUNT
 } mount_type;
-
-typedef enum app2sd_cmd_t {
-	APP2SD_PRE_INSTALL = 1,
-	APP2SD_POST_INSTALL,
-	APP2SD_PRE_UNINSTALL,
-	APP2SD_POST_UNINSTALL,
-	APP2SD_PRE_UPGRADE,
-	APP2SD_POST_UPGRADE,
-	APP2SD_APP_LAUNCH,
-	APP2SD_APP_TERMINATE,
-	APP2SD_MOVE_APP_TO_MMC,
-	APP2SD_MOVE_APP_TO_PHONE
-} app2sd_cmd;
 
 /*Checks whether mmc is present or not*/
 int _app2sd_check_mmc_status(void);
@@ -185,7 +170,7 @@ int _app2sd_remove_password_from_db(const char *pkgid);
 /* This functions saved password in db */
 int _app2sd_set_password_in_db(const char *pkgid, const char *passwd);
 
-/* This functions make result file */
-void _app2sd_make_result_info_file(char *pkgid, int size, uid_t uid);
+int _app2sd_force_clean(const char *pkgid, const char *application_path,
+		const char *loopback_device);
 
 #endif
