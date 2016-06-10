@@ -62,9 +62,11 @@ TARGET_LINK_LIBRARIES(${APP2SD_SERVER} app2sd ${pkgs_LDFLAGS})
 
 CONFIGURE_FILE(org.tizen.app2sd.service.in org.tizen.app2sd.service @ONLY)
 CONFIGURE_FILE(org.tizen.app2sd.conf.in org.tizen.app2sd.conf @ONLY)
+CONFIGURE_FILE(app2sd-server.service.in app2sd-server.service @ONLY)
 
 INSTALL(TARGETS ${APP2SD_SERVER} DESTINATION bin)
 INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/org.tizen.app2sd.service DESTINATION
 	${PREFIX}/share/dbus-1/system-services/)
 INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/org.tizen.app2sd.conf DESTINATION
 	${SYSCONF_INSTALL_DIR}/dbus-1/system.d/)
+INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/app2sd-server.service DESTINATION ${UNITDIR})

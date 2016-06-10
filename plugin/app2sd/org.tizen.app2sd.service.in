@@ -1,4 +1,5 @@
 [D-BUS Service]
 User=root
 Name=org.tizen.app2sd
-Exec=@PREFIX@/bin/app2sd-server
+Exec=@PREFIX@/bin/false
+SystemdService=app2sd-server.service

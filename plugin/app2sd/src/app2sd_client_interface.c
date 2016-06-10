@@ -21,6 +21,7 @@
  *
  */
 
+#include <stdio.h>
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -110,6 +111,51 @@ static void __app2sd_create_dir_list_builder(gpointer data, gpointer user_data)
 	g_variant_builder_add(builder, "(si)", item->name, item->type);
 }
 
+static int __app2sd_create_default_directories(const char *pkgid,
+		app2sd_cmd cmd, uid_t uid)
+{
+	int ret = 0;
+	mode_t mode = DIR_PERMS;
+	char application_path[FILENAME_MAX] = { 0, };
+	char application_mmc_path[FILENAME_MAX] = { 0, };
+
+	if (_is_global(uid)) {
+		snprintf(application_path, FILENAME_MAX - 1, "%s/%s",
+			tzplatform_getenv(TZ_SYS_RW_APP), pkgid);
+	} else {
+		tzplatform_set_user(uid);
+		snprintf(application_path, FILENAME_MAX - 1, "%s/%s",
+			tzplatform_getenv(TZ_USER_APP), pkgid);
+		tzplatform_reset_user();
+	}
+
+	ret = mkdir(application_path, mode);
+	if (ret) {
+		if (errno != EEXIST) {
+			_E("create directory failed," \
+				" error no is (%d)", errno);
+			return APP2EXT_ERROR_CREATE_DIRECTORY;
+		}
+	}
+
+	snprintf(application_mmc_path, FILENAME_MAX - 1, "%s/.mmc",
+		application_path);
+
+	ret = mkdir(application_mmc_path, mode);
+	if (ret) {
+		if (errno != EEXIST) {
+			_E("create directory failed," \
+				" error no is (%d)", errno);
+			return APP2EXT_ERROR_CREATE_DIRECTORY;
+		}
+	}
+
+	if (cmd == APP2SD_PRE_UPGRADE) {
+	}
+
+	return APP2EXT_SUCCESS;
+}
+
 int app2sd_client_usr_pre_app_install(const char *pkgid, GList* dir_list,
 		int size, uid_t uid)
 {
@@ -122,6 +168,11 @@ int app2sd_client_usr_pre_app_install(const char *pkgid, GList* dir_list,
 		_E("invalid function arguments");
 		return APP2EXT_ERROR_INVALID_ARGUMENTS;
 	}
+
+	ret = __app2sd_create_default_directories(pkgid,
+		APP2SD_PRE_INSTALL, uid);
+	if (ret)
+		return ret;
 
 	builder = g_variant_builder_new(G_VARIANT_TYPE("a(si)"));
 	g_list_foreach(dir_list, __app2sd_create_dir_list_builder, builder);
@@ -186,6 +237,11 @@ int app2sd_client_usr_pre_app_upgrade(const char *pkgid, GList* dir_list,
 		_E("invalid function arguments");
 		return APP2EXT_ERROR_INVALID_ARGUMENTS;
 	}
+
+	ret = __app2sd_create_default_directories(pkgid,
+		APP2SD_PRE_UPGRADE, uid);
+	if (ret)
+		return ret;
 
 	builder = g_variant_builder_new(G_VARIANT_TYPE("a(si)"));
 	g_list_foreach(dir_list, __app2sd_create_dir_list_builder, builder);
@@ -373,6 +429,7 @@ int app2sd_client_usr_move_installed_app(const char *pkgid, GList* dir_list,
 	int ret = 0;
 	GVariantBuilder *builder = NULL;
 	GVariant *param = NULL;
+	app2sd_cmd cmd = APP2SD_MOVE_APP_TO_PHONE;
 
 	/* validate the function parameter recieved */
 	if (pkgid == NULL || dir_list == NULL
@@ -381,6 +438,13 @@ int app2sd_client_usr_move_installed_app(const char *pkgid, GList* dir_list,
 		_E("invalid function arguments");
 		return APP2EXT_ERROR_INVALID_ARGUMENTS;
 	}
+
+	if (move_type == APP2EXT_MOVE_TO_EXT)
+		cmd = APP2SD_MOVE_APP_TO_MMC;
+
+	ret = __app2sd_create_default_directories(pkgid, cmd, uid);
+	if (ret)
+		return ret;
 
 	builder = g_variant_builder_new(G_VARIANT_TYPE("a(si)"));
 	g_list_foreach(dir_list, __app2sd_create_dir_list_builder, builder);

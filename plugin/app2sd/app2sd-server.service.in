@@ -1,0 +1,6 @@
+[Unit]
+Description=app2sd server
+
+[Service]
+ExecStart=@PREFIX@/bin/app2sd-server
+CapabilityBoundingSet=~CAP_MAC_ADMIN

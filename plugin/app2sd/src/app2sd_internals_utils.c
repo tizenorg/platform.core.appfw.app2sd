@@ -177,7 +177,7 @@ int _app2sd_delete_directory(const char *dirname)
 		if (ret <0)
 			return -1;
 	} else {
-		_E("couldn't open the directory[%s]", dirname);
+		_W("couldn't open the directory[%s]", dirname);
 	}
 	return 0;
 }

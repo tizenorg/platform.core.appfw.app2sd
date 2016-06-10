@@ -89,6 +89,23 @@ typedef enum app2ext_move_type_t {
 } app2ext_move_type;
 
 /**
+ * Enum for command type
+ * @see app2sd_move_installed_app()
+ */
+typedef enum app2sd_cmd_t {
+	APP2SD_PRE_INSTALL = 1,
+	APP2SD_POST_INSTALL,
+	APP2SD_PRE_UNINSTALL,
+	APP2SD_POST_UNINSTALL,
+	APP2SD_PRE_UPGRADE,
+	APP2SD_POST_UPGRADE,
+	APP2SD_APP_LAUNCH,
+	APP2SD_APP_TERMINATE,
+	APP2SD_MOVE_APP_TO_MMC,
+	APP2SD_MOVE_APP_TO_PHONE
+} app2sd_cmd;
+
+/**
  * Enum for error codes
  */
 typedef enum app2ext_error_t {

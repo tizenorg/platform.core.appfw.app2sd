@@ -40,7 +40,7 @@ Tizen application installation on external memory (test)
 %setup -q
 
 %build
-%cmake .
+%cmake . -DUNITDIR=%{_unitdir}
 
 make %{?jobs:-j%jobs}
 
@@ -61,6 +61,7 @@ cp LICENSE %{buildroot}/usr/share/license/%{name}
 %{_libdir}/libapp2ext.so.*
 %{_libdir}/libapp2sd.so*
 %{_bindir}/app2sd-server
+%{_unitdir}/app2sd-server.service
 %{_datadir}/dbus-1/system-services/org.tizen.app2sd.service
 %config %{_sysconfdir}/dbus-1/system.d/org.tizen.app2sd.conf
 /usr/share/license/%{name}
