@@ -679,6 +679,7 @@ static void __app2sd_on_name_lost(GDBusConnection *connection,
 		const gchar *name, gpointer user_data)
 {
 	_E("name lost(%s)", name);
+	g_main_loop_quit(app2sd_mainloop);
 }
 
 static int __app2sd_server_init()

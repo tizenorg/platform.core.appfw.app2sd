@@ -122,15 +122,6 @@ int app2sd_usr_pre_app_install(const char *pkgid, GList* dir_list, int size, uid
 	/* create a loopback device */
 	ret = _app2sd_create_loopback_device(pkgid, loopback_device,
 		(reqd_disk_size + PKG_BUF_SIZE));
-	if (ret) {
-		_W("package already present, delete app directory");
-		ret = _app2sd_delete_directory(application_path);
-		if (ret) {
-			_E("unable to delete the directory (%s)",
-				application_path);
-			return ret;
-		}
-	}
 
 	/* perform loopback encryption setup */
 	device_node = _app2sd_do_loopback_encryption_setup(pkgid,
