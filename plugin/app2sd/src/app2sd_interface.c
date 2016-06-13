@@ -46,6 +46,7 @@ int app2sd_usr_pre_app_install(const char *pkgid, GList* dir_list, int size, uid
 {
 	int ret = 0;
 	int free_mmc_mem = 0;
+	FILE *fp = NULL;
 	char *device_node = NULL;
 	char *devi = NULL;
 	char *result = NULL;
@@ -110,6 +111,17 @@ int app2sd_usr_pre_app_install(const char *pkgid, GList* dir_list, int size, uid
 	if (ret) {
 		_E("failed to create app2sd dirs");
 		return ret;
+	}
+
+	/* force clean */
+	fp = fopen(loopback_device, "r+");
+	if (fp != NULL) {
+		_W("Already %s entry is present in the SD Card, " \
+			"delete entry and go on without return", pkgid);
+		fclose(fp);
+		app2sd_usr_force_clean(pkgid, uid);
+	} else {
+		fclose(fp);
 	}
 
 	/* check same loopback_device existence */

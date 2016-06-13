@@ -286,7 +286,6 @@ char *_app2sd_do_loopback_duplicate_encryption_setup(const char *pkgid,
 				return NULL;
 			}
 		}
-
 	}
 
 	/* get free device node*/
@@ -723,6 +722,8 @@ int _app2sd_move_app_to_external(const char *pkgid, GList* dir_list, uid_t uid)
 			"delete entry and go on without return", pkgid);
 		fclose(fp);
 		app2sd_usr_force_clean(pkgid, uid);
+	} else {
+		fclose(fp);
 	}
 
 	snprintf(application_mmc_path, FILENAME_MAX - 1, "%s/.mmc",
