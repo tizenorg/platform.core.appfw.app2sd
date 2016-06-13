@@ -286,7 +286,6 @@ char *_app2sd_do_loopback_duplicate_encryption_setup(const char *pkgid,
 				return NULL;
 			}
 		}
-
 	}
 
 	/* get free device node*/
