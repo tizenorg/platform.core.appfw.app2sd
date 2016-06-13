@@ -170,7 +170,7 @@ int _app2sd_remove_password_from_db(const char *pkgid);
 /* This functions saved password in db */
 int _app2sd_set_password_in_db(const char *pkgid, const char *passwd);
 
-/* This functions make result file */
-void _app2sd_make_result_info_file(char *pkgid, int size, uid_t uid);
+int _app2sd_force_clean(const char *pkgid, const char *application_path,
+		const char *loopback_device);
 
 #endif

@@ -46,6 +46,7 @@ int app2sd_usr_pre_app_install(const char *pkgid, GList* dir_list, int size, uid
 {
 	int ret = 0;
 	int free_mmc_mem = 0;
+	FILE *fp = NULL;
 	char *device_node = NULL;
 	char *devi = NULL;
 	char *result = NULL;
@@ -1021,36 +1022,7 @@ int app2sd_usr_force_clean(const char *pkgid, uid_t uid)
 	}
 	free(encoded_id);
 
-	/* unmount the loopback encrypted pseudo device from the application installation path */
-	ret = _app2sd_unmount_app_content(application_path);
-	if (ret) {
-		_E("unable to unmount the app content (%d)", ret);
-	}
+	ret = _app2sd_force_clean(pkgid, application_path, loopback_device);
 
-	/* detach the loopback encryption setup for the application */
-	ret = _app2sd_remove_all_loopback_encryption_setups(pkgid);
-	if (ret) {
-		_E("unable to detach the loopback encryption setup for the application");
-	}
-
-	/* delete the loopback device from the SD card */
-	ret = _app2sd_delete_loopback_device(loopback_device);
-	if (ret) {
-		_E("unable to detach the loopback encryption setup for the application");
-	}
-
-	/* delete symlink */
-	_app2sd_delete_symlink(application_path);
-
-	/* remove passwrd from DB */
-	ret = _app2sd_initialize_db();
-	if (ret) {
-		_E("app2sd db initialize failed");
-	}
-	ret = _app2sd_remove_password_from_db(pkgid);
-	if (ret) {
-		_E("cannot remove password from db");
-	}
-
-	return 0;
+	return ret;
 }

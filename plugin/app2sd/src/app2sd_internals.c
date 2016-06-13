@@ -286,7 +286,6 @@ char *_app2sd_do_loopback_duplicate_encryption_setup(const char *pkgid,
 				return NULL;
 			}
 		}
-
 	}
 
 	/* get free device node*/
@@ -722,7 +721,7 @@ int _app2sd_move_app_to_external(const char *pkgid, GList* dir_list, uid_t uid)
 		_W("Already %s entry is present in the SD Card, " \
 			"delete entry and go on without return", pkgid);
 		fclose(fp);
-		app2sd_usr_force_clean(pkgid, uid);
+		_app2sd_force_clean(pkgid, application_path, loopback_device);
 	}
 
 	snprintf(application_mmc_path, FILENAME_MAX - 1, "%s/.mmc",
@@ -1433,4 +1432,43 @@ FINISH_OFF:
 	}
 
 	return err_res;
+}
+
+int _app2sd_force_clean(const char *pkgid, const char *application_path,
+		const char *loopback_device)
+{
+	int ret = APP2EXT_SUCCESS;
+
+	/* unmount the loopback encrypted pseudo device from the application installation path */
+	ret = _app2sd_unmount_app_content(application_path);
+	if (ret) {
+		_E("unable to unmount the app content (%d)", ret);
+	}
+
+	/* detach the loopback encryption setup for the application */
+	ret = _app2sd_remove_all_loopback_encryption_setups(loopback_device);
+	if (ret) {
+		_E("unable to detach the loopback encryption setup for the application");
+	}
+
+	/* delete the loopback device from the SD card */
+	ret = _app2sd_delete_loopback_device(loopback_device);
+	if (ret) {
+		_E("unable to detach the loopback encryption setup for the application");
+	}
+
+	/* delete symlink */
+	_app2sd_delete_symlink(application_path);
+
+	/* remove passwrd from DB */
+	ret = _app2sd_initialize_db();
+	if (ret) {
+		_E("app2sd db initialize failed");
+	}
+	ret = _app2sd_remove_password_from_db(pkgid);
+	if (ret) {
+		_E("cannot remove password from db");
+	}
+
+	return ret;
 }
