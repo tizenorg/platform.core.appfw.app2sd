@@ -622,10 +622,12 @@ char *_app2sd_generate_password(const char *pkgid)
 
 	while (i < PASSWD_LEN) {
 		seed = time(NULL);
-		char_1 = (rand_r(&seed) + pkgid[j--]) % ASCII_PASSWD_CHAR;
+		if (j > 0) j--;
+		char_1 = (rand_r(&seed) + pkgid[j]) % ASCII_PASSWD_CHAR;
 		char_2 = rand_r(&seed) % ASCII_PASSWD_CHAR;
 		passwd[i] = set[char_1];
-		passwd[i + 1] = set[(pkgid[j--]) * 2];
+		if (j > 0) j--;
+		passwd[i + 1] = set[((pkgid[j]) * 2) % ASCII_PASSWD_CHAR];
 		if (i < PASSWD_LEN - 3)
 			passwd[i + 2] = set[char_2];
 		i++;
