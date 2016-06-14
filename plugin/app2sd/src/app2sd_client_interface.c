@@ -118,6 +118,7 @@ static int __app2sd_create_default_directories(const char *pkgid,
 	mode_t mode = DIR_PERMS;
 	char application_path[FILENAME_MAX] = { 0, };
 	char application_mmc_path[FILENAME_MAX] = { 0, };
+	char temp_path[FILENAME_MAX] = { 0, };
 
 	if (_is_global(uid)) {
 		snprintf(application_path, FILENAME_MAX - 1, "%s/%s",
@@ -151,12 +152,34 @@ static int __app2sd_create_default_directories(const char *pkgid,
 	}
 
 	if (cmd == APP2SD_PRE_UPGRADE) {
+		/* application_path for {pkgid}.new */
+		snprintf(temp_path, FILENAME_MAX - 1, "%s.new",
+			application_path);
+		ret = mkdir(temp_path, mode);
+		if (ret) {
+			if (errno != EEXIST) {
+				_E("create directory failed," \
+					" error no is (%d)", errno);
+				return APP2EXT_ERROR_CREATE_DIRECTORY;
+			}
+		}
+		/* application_mmc_path for {pkgid}.new */
+		snprintf(application_mmc_path, FILENAME_MAX - 1, "%s/.mmc",
+			temp_path);
+		ret = mkdir(application_mmc_path, mode);
+		if (ret) {
+			if (errno != EEXIST) {
+				_E("create directory failed," \
+					" error no is (%d)", errno);
+				return APP2EXT_ERROR_CREATE_DIRECTORY;
+			}
+		}
 	}
 
 	return APP2EXT_SUCCESS;
 }
 
-int app2sd_client_usr_pre_app_install(const char *pkgid, GList* dir_list,
+int app2sd_client_usr_pre_app_install(const char *pkgid, GList *dir_list,
 		int size, uid_t uid)
 {
 	int ret = 0;
@@ -185,7 +208,7 @@ int app2sd_client_usr_pre_app_install(const char *pkgid, GList* dir_list,
 
 	return ret;
 }
-int app2sd_client_pre_app_install(const char *pkgid, GList* dir_list,
+int app2sd_client_pre_app_install(const char *pkgid, GList *dir_list,
 		int size)
 {
 	int ret = 0;
@@ -225,7 +248,7 @@ int app2sd_client_post_app_install(const char *pkgid,
 	return ret;
 }
 
-int app2sd_client_usr_pre_app_upgrade(const char *pkgid, GList* dir_list,
+int app2sd_client_usr_pre_app_upgrade(const char *pkgid, GList *dir_list,
 		int size, uid_t uid)
 {
 	int ret = 0;
@@ -254,7 +277,7 @@ int app2sd_client_usr_pre_app_upgrade(const char *pkgid, GList* dir_list,
 
 	return ret;
 }
-int app2sd_client_pre_app_upgrade(const char *pkgid, GList* dir_list,
+int app2sd_client_pre_app_upgrade(const char *pkgid, GList *dir_list,
 		int size)
 {
 	int ret = 0;
@@ -371,6 +394,24 @@ int app2sd_client_force_clean(const char *pkgid)
 	return ret;
 }
 
+int app2sd_client_enable_full_pkg(void)
+{
+	int ret = 0;
+
+	ret = __app2sd_call_server_method("EnableFullPkg", NULL);
+
+	return ret;
+}
+
+int app2sd_client_disable_full_pkg(void)
+{
+	int ret = 0;
+
+	ret = __app2sd_call_server_method("DisableFullPkg", NULL);
+
+	return ret;
+}
+
 int app2sd_client_usr_on_demand_setup_init(const char *pkgid, uid_t uid)
 {
 	int ret = 0;
@@ -423,7 +464,7 @@ int app2sd_client_on_demand_setup_exit(const char *pkgid)
 	return ret;
 }
 
-int app2sd_client_usr_move_installed_app(const char *pkgid, GList* dir_list,
+int app2sd_client_usr_move_installed_app(const char *pkgid, GList *dir_list,
 		app2ext_move_type move_type, uid_t uid)
 {
 	int ret = 0;
@@ -457,7 +498,7 @@ int app2sd_client_usr_move_installed_app(const char *pkgid, GList* dir_list,
 
 	return ret;
 }
-int app2sd_client_move_installed_app(const char *pkgid, GList* dir_list,
+int app2sd_client_move_installed_app(const char *pkgid, GList *dir_list,
 		app2ext_move_type move_type)
 {
 	int ret = 0;
@@ -480,6 +521,8 @@ void app2ext_on_load(app2ext_interface *interface)
 	interface->client_force_clean = app2sd_client_force_clean;
 	interface->client_enable = app2sd_client_on_demand_setup_init;
 	interface->client_disable = app2sd_client_on_demand_setup_exit;
+	interface->client_enable_full_pkg = app2sd_client_enable_full_pkg;
+	interface->client_disable_full_pkg = app2sd_client_disable_full_pkg;
 	interface->client_move = app2sd_client_move_installed_app;
 
 	interface->client_usr_pre_install = app2sd_client_usr_pre_app_install;

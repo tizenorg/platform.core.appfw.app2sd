@@ -28,7 +28,7 @@
 
 #include "app2sd_internals.h"
 
-static int _app2sd_make_directory(const char* path, uid_t uid)
+static int _app2sd_make_directory(const char *path, uid_t uid)
 {
 	int ret = 0;
 	int fd = -1;
@@ -173,9 +173,9 @@ char *_app2sd_create_loopdevice_node(void)
 			return NULL;
 		}
 		memset(ret_result, '\0', strlen(result) + 1);
-		if (strlen(result) > 0) {
+		if (strlen(result) > 0)
 			memcpy(ret_result, result, strlen(result) - 1);
-		}
+
 		free(result);
 		result = NULL;
 
@@ -203,15 +203,15 @@ char *_app2sd_do_loopback_encryption_setup(const char *pkgid,
 		return NULL;
 	}
 
-	if ((passwd = _app2sd_get_password_from_db(pkgid)) == NULL) {
+	if ((passwd = _app2sd_get_password_from_db(pkgid, uid)) == NULL) {
 		passwd = (char *)_app2sd_generate_password(pkgid);
 		if (NULL == passwd) {
 			_E("unable to generate password");
 			return NULL;
 		} else {
-			if ((ret = _app2sd_set_password_in_db(pkgid,
-				passwd)) < 0) {
-				_E("unable to save password");
+			if ((ret = _app2sd_set_info_in_db(pkgid,
+				passwd, loopback_device, uid)) < 0) {
+				_E("unable to save info");
 				free(passwd);
 				passwd = NULL;
 				return NULL;
@@ -249,47 +249,20 @@ char *_app2sd_do_loopback_encryption_setup(const char *pkgid,
 
 char *_app2sd_do_loopback_duplicate_encryption_setup(const char *pkgid,
 		const char *temp_pkgid, const char *temp_loopback_device,
-		uid_t uid)
+		char *passwd, uid_t uid)
 {
-	int ret = APP2EXT_SUCCESS;
-	char *passwd = NULL;
 	char *result = NULL;
 	char *device_node = NULL;
 
 	if (pkgid == NULL || temp_pkgid == NULL ||
-		temp_loopback_device == NULL) {
+		temp_loopback_device == NULL || passwd == NULL) {
 		_E("invalid argument");
 		return NULL;
-	}
-
-	/* get password for loopback encryption */
-	ret = _app2sd_initialize_db();
-	if (ret) {
-		_E("app2sd db initialize failed");
-		return NULL;
-	}
-
-	if ((passwd = _app2sd_get_password_from_db(pkgid)) == NULL) {
-		passwd = (char *)_app2sd_generate_password(pkgid);
-		if (NULL == passwd) {
-			_E("unable to generate password");
-			return NULL;
-		} else {
-			if ((ret = _app2sd_set_password_in_db(pkgid,
-				passwd)) < 0) {
-				_E("unable to save password");
-				free(passwd);
-				passwd = NULL;
-				return NULL;
-			}
-		}
 	}
 
 	/* get free device node*/
 	device_node = _app2sd_create_loopdevice_node();
 	if (NULL == device_node) {
-		free(passwd);
-		passwd = NULL;
 		_E("unable to find free loopback node");
 		return NULL;
 	}
@@ -297,22 +270,16 @@ char *_app2sd_do_loopback_duplicate_encryption_setup(const char *pkgid,
 		temp_loopback_device, passwd);
 	if (result == NULL) {
 		_E("encryption failed");
-		free(passwd);
-		passwd = NULL;
 		return NULL;
 	} else {
 		if (strlen(result) == 0) {
 			free(result);
 			result = NULL;
-			free(passwd);
-			passwd = NULL;
 			return device_node;
 		} else {
 			_E("error is (%s)", result);
 			free(result);
 			result = NULL;
-			free(passwd);
-			passwd = NULL;
 			return NULL;
 		}
 	}
@@ -354,7 +321,7 @@ int _app2sd_remove_all_loopback_encryption_setups(const char *loopback_device)
 	int ret = APP2EXT_SUCCESS;
 	char *result = NULL;
 	char *dev_node = NULL;
-	while(1) {
+	while (1) {
 		if ((dev_node =
 			_app2sd_find_associated_device_node(loopback_device))
 			== NULL) {
@@ -398,8 +365,8 @@ int _app2sd_create_loopback_device(const char *pkgid,
 	snprintf(command, FILENAME_MAX - 1, "of=%s", loopback_device);
 	snprintf(buff, BUF_SIZE - 1, "count=%d", size);
 
-	const char *argv1[] =
-	    { "dd", "if=/dev/zero", command, "bs=1M", buff, NULL };
+	const char *argv1[] = { "dd", "if=/dev/zero",
+		command, "bs=1M", buff, NULL };
 
 	if ((fp = fopen(loopback_device, "r+")) != NULL) {
 		_W("encrypted file already exists (%s)",
@@ -498,11 +465,11 @@ static int _app2sd_create_dir_with_link(const char *application_path,
 }
 
 static int _app2sd_create_directory_entry(const char *application_path,
-		const char *pkgid, GList* dir_list, uid_t uid)
+		const char *pkgid, GList *dir_list, uid_t uid)
 {
 	int ret = APP2EXT_SUCCESS;
 	GList *list = NULL;
-	app2ext_dir_details* dir_detail = NULL;
+	app2ext_dir_details *dir_detail = NULL;
 
 	list = g_list_first(dir_list);
 	while (list) {
@@ -511,9 +478,8 @@ static int _app2sd_create_directory_entry(const char *application_path,
 			&& dir_detail->type == APP2EXT_DIR_RO) {
 			ret = _app2sd_create_dir_with_link(application_path,
 				pkgid, dir_detail->name, uid);
-			if (ret) {
+			if (ret)
 				return ret;
-			}
 		}
 		list = g_list_next(list);
 	}
@@ -521,7 +487,7 @@ static int _app2sd_create_directory_entry(const char *application_path,
 }
 
 int _app2sd_mount_app_content(const char *application_path, const char *pkgid,
-		const char *dev, int mount_type, GList* dir_list,
+		const char *dev, int mount_type, GList *dir_list,
 		app2sd_cmd cmd, uid_t uid)
 {
 	int ret = APP2EXT_SUCCESS;
@@ -667,7 +633,7 @@ static int _app2sd_move_to_archive(const char *src_path, const char *arch_path)
 	return ret;
 }
 
-int _app2sd_move_app_to_external(const char *pkgid, GList* dir_list, uid_t uid)
+int _app2sd_move_app_to_external(const char *pkgid, GList *dir_list, uid_t uid)
 {
 	int ret = APP2EXT_SUCCESS;
 	mode_t mode = DIR_PERMS;
@@ -684,8 +650,8 @@ int _app2sd_move_app_to_external(const char *pkgid, GList* dir_list, uid_t uid)
 	int free_mmc_mem = 0;
 	FILE *fp = NULL;
 	GList *list = NULL;
-	app2ext_dir_details* dir_detail = NULL;
-	char err_buf[1024] = {0,};
+	app2ext_dir_details *dir_detail = NULL;
+	char err_buf[1024] = { 0,};
 	char *encoded_id = NULL;
 
 	/* check whether MMC is present or not */
@@ -696,9 +662,9 @@ int _app2sd_move_app_to_external(const char *pkgid, GList* dir_list, uid_t uid)
 	}
 
 	encoded_id = _app2sd_get_encoded_name(pkgid, uid);
-	if (encoded_id == NULL) {
+	if (encoded_id == NULL)
 		return APP2EXT_ERROR_MEMORY_ALLOC_FAILED;
-	}
+
 	snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s",
 			APP2SD_PATH, encoded_id);
 	free(encoded_id);
@@ -718,7 +684,7 @@ int _app2sd_move_app_to_external(const char *pkgid, GList* dir_list, uid_t uid)
 		_W("Already %s entry is present in the SD Card, " \
 			"delete entry and go on without return", pkgid);
 		fclose(fp);
-		_app2sd_force_clean(pkgid, application_path, loopback_device);
+		_app2sd_force_clean(pkgid, application_path, loopback_device, uid);
 	}
 
 	snprintf(application_mmc_path, FILENAME_MAX - 1, "%s/.mmc",
@@ -752,7 +718,7 @@ int _app2sd_move_app_to_external(const char *pkgid, GList* dir_list, uid_t uid)
 		list = g_list_next(list);
 	}
 
-	reqd_size = ((total_size) / ( 1024 * 1024)) + 2;
+	reqd_size = ((total_size) / (1024 * 1024)) + 2;
 	reqd_disk_size = reqd_size + ceil(reqd_size * 0.2);
 
 	/* find avialable free memory in the MMC card */
@@ -898,7 +864,7 @@ int _app2sd_move_app_to_external(const char *pkgid, GList* dir_list, uid_t uid)
 	return APP2EXT_SUCCESS;
 }
 
-int _app2sd_move_app_to_internal(const char *pkgid, GList* dir_list, uid_t uid)
+int _app2sd_move_app_to_internal(const char *pkgid, GList *dir_list, uid_t uid)
 {
 	int ret = APP2EXT_SUCCESS;
 	mode_t mode = DIR_PERMS;
@@ -910,7 +876,7 @@ int _app2sd_move_app_to_internal(const char *pkgid, GList* dir_list, uid_t uid)
 	char *device_node = NULL;
 	FILE *fp = NULL;
 	GList *list = NULL;
-	app2ext_dir_details* dir_detail = NULL;
+	app2ext_dir_details *dir_detail = NULL;
 	int reqd_size = 0;
 	int free_internal_mem = 0;
 	struct statvfs buf = {0,};
@@ -926,9 +892,9 @@ int _app2sd_move_app_to_internal(const char *pkgid, GList* dir_list, uid_t uid)
 	}
 
 	encoded_id = _app2sd_get_encoded_name(pkgid, uid);
-	if (encoded_id == NULL) {
+	if (encoded_id == NULL)
 		return APP2EXT_ERROR_MEMORY_ALLOC_FAILED;
-	}
+
 	snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s",
 			APP2SD_PATH, encoded_id);
 	free(encoded_id);
@@ -955,7 +921,7 @@ int _app2sd_move_app_to_internal(const char *pkgid, GList* dir_list, uid_t uid)
 
 	memset((void *)&buf, '\0', sizeof(struct statvfs));
 	ret = statvfs(INTERNAL_STORAGE_PATH, &buf);
-	if (0 == ret){
+	if (0 == ret) {
 		temp = (buf.f_bsize * buf.f_bavail) / (1024 * 1024);
 		free_internal_mem = (int)temp;
 	} else {
@@ -1140,7 +1106,7 @@ int _app2sd_move_app_to_internal(const char *pkgid, GList* dir_list, uid_t uid)
 }
 
 int _app2sd_usr_move_app(const char *pkgid, app2ext_move_type move_type,
-		GList* dir_list, uid_t uid)
+		GList *dir_list, uid_t uid)
 {
 	int ret = APP2EXT_SUCCESS;
 
@@ -1174,12 +1140,12 @@ int _app2sd_usr_move_app(const char *pkgid, app2ext_move_type move_type,
 	return ret;
 }
 
-int _app2sd_copy_ro_content(const char *src, const char *dest, GList* dir_list)
+int _app2sd_copy_ro_content(const char *src, const char *dest, GList *dir_list)
 {
 	char path[FILENAME_MAX] = { 0, };
 	int ret = APP2EXT_SUCCESS;
 	GList *list = NULL;
-	app2ext_dir_details* dir_detail = NULL;
+	app2ext_dir_details *dir_detail = NULL;
 
 	list = g_list_first(dir_list);
 	while (list) {
@@ -1212,13 +1178,14 @@ int _app2sd_duplicate_device(const char *pkgid,
 		const char *temp_pkgid,
 		const char *temp_application_path,
 		const char *temp_loopback_device,
-		GList* dir_list, char *dev_node, int size,
+		GList *dir_list, char *dev_node, int size,
 		uid_t uid)
 {
 	int ret = 0;
 	char *devi = NULL;
 	int err_res = 0;
 	char *result = NULL;
+	char *passwd = NULL;
 
 	/* create a new loopback device */
 	ret = _app2sd_create_loopback_device(temp_pkgid,
@@ -1228,15 +1195,41 @@ int _app2sd_duplicate_device(const char *pkgid,
 		return ret;
 	}
 
+	/* get password for loopback encryption */
+	ret = _app2sd_initialize_db();
+	if (ret) {
+		_E("app2sd db initialize failed");
+		return APP2EXT_ERROR_DB_INITIALIZE;
+	}
+
+	if ((passwd = _app2sd_get_password_from_db(pkgid, uid)) == NULL) {
+		passwd = (char *)_app2sd_generate_password(pkgid);
+		if (NULL == passwd) {
+			_E("unable to generate password");
+			return APP2EXT_ERROR_PASSWD_GENERATION;
+		} else {
+			if ((ret = _app2sd_set_info_in_db(pkgid,
+				passwd, loopback_device, uid)) < 0) {
+				_E("unable to save info");
+				free(passwd);
+				passwd = NULL;
+				return APP2EXT_ERROR_SQLITE_REGISTRY;
+			}
+		}
+	}
+
 	/* perform loopback encryption setup */
 	dev_node = _app2sd_do_loopback_duplicate_encryption_setup(pkgid,
-		temp_pkgid, temp_loopback_device, uid);
+		temp_pkgid, temp_loopback_device, passwd, uid);
 	if (!dev_node) {
 		_E("losetup failed, device node is (%s)", dev_node);
 		_app2sd_delete_loopback_device(loopback_device);
-		_E("create ext filesystem failed");
+		free(passwd);
+		passwd = NULL;
 		return APP2EXT_ERROR_DO_LOSETUP;
 	}
+	free(passwd);
+	passwd = NULL;
 	_D("duplicate setup SUCCESS");
 
 	/* check whether loopback device is associated with
@@ -1301,7 +1294,7 @@ int _app2sd_update_loopback_device_size(const char *pkgid,
 		const char *temp_pkgid,
 		const char *temp_loopback_device,
 		const char *temp_application_path,
-		int size, GList* dir_list,
+		int size, GList *dir_list,
 		uid_t uid)
 {
 	int ret = 0;
@@ -1426,40 +1419,37 @@ FINISH_OFF:
 }
 
 int _app2sd_force_clean(const char *pkgid, const char *application_path,
-		const char *loopback_device)
+		const char *loopback_device, uid_t uid)
 {
 	int ret = APP2EXT_SUCCESS;
 
 	/* unmount the loopback encrypted pseudo device from the application installation path */
 	ret = _app2sd_unmount_app_content(application_path);
-	if (ret) {
+	if (ret)
 		_E("unable to unmount the app content (%d)", ret);
-	}
 
 	/* detach the loopback encryption setup for the application */
 	ret = _app2sd_remove_all_loopback_encryption_setups(loopback_device);
-	if (ret) {
+	if (ret)
 		_E("unable to detach the loopback encryption setup for the application");
-	}
 
 	/* delete the loopback device from the SD card */
 	ret = _app2sd_delete_loopback_device(loopback_device);
-	if (ret) {
+	if (ret)
 		_E("unable to detach the loopback encryption setup for the application");
-	}
 
 	/* delete symlink */
 	_app2sd_delete_symlink(application_path);
 
 	/* remove passwrd from DB */
 	ret = _app2sd_initialize_db();
-	if (ret) {
+	if (ret)
 		_E("app2sd db initialize failed");
-	}
-	ret = _app2sd_remove_password_from_db(pkgid);
-	if (ret) {
-		_E("cannot remove password from db");
-	}
+
+	ret = _app2sd_remove_info_from_db(pkgid, uid);
+	if (ret)
+		_E("cannot remove info from db");
+
 
 	return ret;
 }
