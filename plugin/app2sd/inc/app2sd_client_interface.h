@@ -55,9 +55,9 @@ extern "C" {
 /**
  * @brief : This API prepares the setup for installation in SD card.
  *		It should be called before actual installation is done.
- * @pre			vfat type sd card must be present.
- * @post		Installation is done by package installer.
- 		Encryption password is saved in db TZ_SYS_DB/.app2sd.db
+ * @pre		vfat type sd card must be present.
+ * @post	Installation is done by package installer.
+ *		Encryption password is saved in db TZ_SYS_DB/.app2sd.db
  * @param[in] appname		application package name
  *				[Ex: com.samsung.calculator]
  *This entry is parsed from application package control/manifest file.
@@ -68,9 +68,9 @@ extern "C" {
  * @remark	None.
  */
 int app2sd_client_usr_pre_app_install(const char *pkgid,
-		GList* dir_list, int size, uid_t uid);
+		GList *dir_list, int size, uid_t uid);
 int app2sd_client_pre_app_install(const char *pkgid,
-		GList* dir_list, int size);
+		GList *dir_list, int size);
 
 /**
  * @brief : This API does post installation operations after
@@ -104,9 +104,9 @@ int app2sd_client_post_app_install(const char *pkgid,
  * @remark	None.
  */
 int app2sd_client_usr_pre_app_upgrade(const char *pkgid,
-		GList* dir_list, int size, uid_t uid);
+		GList *dir_list, int size, uid_t uid);
 int app2sd_client_pre_app_upgrade(const char *pkgid,
-		GList* dir_list, int size);
+		GList *dir_list, int size);
 
 /**
  * @brief : This API does post upgradation operations after
@@ -165,9 +165,9 @@ int app2sd_client_post_app_uninstall(const char *pkgid);
  * @remark	None.
  */
 int app2sd_client_usr_move_installed_app(const char *pkgid,
-		GList* dir_list, app2ext_move_type move_type, uid_t uid);
+		GList *dir_list, app2ext_move_type move_type, uid_t uid);
 int app2sd_client_move_installed_app(const char *pkgid,
-		GList* dir_list, app2ext_move_type move_type);
+		GList *dir_list, app2ext_move_type move_type);
 
 /**
  * @brief : This API Enables the application in sd card
@@ -202,7 +202,7 @@ int app2sd_client_force_clean(const char *pkgid);
 
 /**
  * @brief : This is the plug-in load function.
- 	  The plugin has to bind its functions to function pointers of storage handle
+ *	The plugin has to bind its functions to function pointers of storage handle
  * @param[in/out] st_interface		Specifies the storage interface.
  * @return	None
 */
