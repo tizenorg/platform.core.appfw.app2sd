@@ -43,7 +43,7 @@ app2ext_handle *handle = NULL;
 
 char pkg_ro_content_rpm[3][5] = { "bin", "res", "lib" };
 
-#define COUNT_OF_ERROR_LIST 50
+#define COUNT_OF_ERROR_LIST 49
 char error_list[COUNT_OF_ERROR_LIST][100] = {
 	"SUCCESS",
 	"APP2EXT_ERROR_UNKNOWN",
@@ -68,7 +68,6 @@ char error_list[COUNT_OF_ERROR_LIST][100] = {
 	"APP2EXT_ERROR_STRCMP_FAILED",
 	"APP2EXT_ERROR_INVALID_PACKAGE",
 	"APP2EXT_ERROR_CREATE_DIR_ENTRY",
-	"APP2EXT_ERROR_PASSWORD_GENERATION",
 	"APP2EXT_ERROR_COPY_DIRECTORY",
 	"APP2EXT_ERROR_INVALID_CASE",
 	"APP2EXT_ERROR_SYMLINK_ALREADY_EXISTS",
@@ -133,6 +132,8 @@ static void usage(void)
 	printf("<ENABLE(mount)/DISABLE(umount) TEST W/ Installed PKG>\n");
 	printf("(at target_user)$test_app2ext --enable\n");
 	printf("(at target_user)$test_app2ext --disable\n");
+	printf("(at target_user)$test_app2ext --enable-full\n");
+	printf("(at target_user)$test_app2ext --disable-full\n");
 	printf("------------------------------------------------\n");
 	printf("**************************************************\n");
 	printf("\n");
@@ -148,7 +149,9 @@ static void usage(void)
 #define OPTVAL_GET_LOCATION		1007
 #define OPTVAL_ENABLE_APP		1008
 #define OPTVAL_DISABLE_APP		1009
-#define OPTVAL_USAGE			1010
+#define OPTVAL_ENABLE_FULL		1010
+#define OPTVAL_DISABLE_FULL		1011
+#define OPTVAL_USAGE			1012
 
 /* Supported options */
 const struct option long_opts[] = {
@@ -162,6 +165,8 @@ const struct option long_opts[] = {
 	{ "getlocation", 0, NULL, OPTVAL_GET_LOCATION },
 	{ "enable", 0, NULL, OPTVAL_ENABLE_APP },
 	{ "disable", 0, NULL, OPTVAL_DISABLE_APP },
+	{ "enable-full", 0, NULL, OPTVAL_ENABLE_FULL },
+	{ "disable-full", 0, NULL, OPTVAL_DISABLE_FULL },
 	{ "help", 0, NULL, OPTVAL_USAGE },
 	{ "usage", 0, NULL, OPTVAL_USAGE },
 	{ 0, 0, 0, 0 }	/* sentinel */
@@ -344,6 +349,26 @@ static int app_disable()
 	int ret = -1;
 
 	ret = handle->interface.client_disable(TEST_PKGNAME);
+	print_error_code(__func__, ret);
+
+	return ret;
+}
+
+static int fullpkg_enable()
+{
+	int ret = -1;
+
+	ret = handle->interface.client_enable_full_pkg();
+	print_error_code(__func__, ret);
+
+	return ret;
+}
+
+static int fullpkg_disable()
+{
+	int ret = -1;
+
+	ret = handle->interface.client_disable_full_pkg();
 	print_error_code(__func__, ret);
 
 	return ret;
@@ -535,6 +560,12 @@ int main(int argc, char **argv)
 			break;
 		case OPTVAL_DISABLE_APP:
 			app_disable();
+			break;
+		case OPTVAL_ENABLE_FULL:
+			fullpkg_enable();
+			break;
+		case OPTVAL_DISABLE_FULL:
+			fullpkg_disable();
 			break;
 		case OPTVAL_USAGE:
 		default:

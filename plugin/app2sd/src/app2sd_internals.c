@@ -203,15 +203,15 @@ char *_app2sd_do_loopback_encryption_setup(const char *pkgid,
 		return NULL;
 	}
 
-	if ((passwd = _app2sd_get_password_from_db(pkgid)) == NULL) {
+	if ((passwd = _app2sd_get_password_from_db(pkgid, uid)) == NULL) {
 		passwd = (char *)_app2sd_generate_password(pkgid);
 		if (NULL == passwd) {
 			_E("unable to generate password");
 			return NULL;
 		} else {
-			if ((ret = _app2sd_set_password_in_db(pkgid,
-				passwd)) < 0) {
-				_E("unable to save password");
+			if ((ret = _app2sd_set_info_in_db(pkgid,
+				passwd, loopback_device, uid)) < 0) {
+				_E("unable to save info");
 				free(passwd);
 				passwd = NULL;
 				return NULL;
@@ -249,47 +249,20 @@ char *_app2sd_do_loopback_encryption_setup(const char *pkgid,
 
 char *_app2sd_do_loopback_duplicate_encryption_setup(const char *pkgid,
 		const char *temp_pkgid, const char *temp_loopback_device,
-		uid_t uid)
+		char *passwd, uid_t uid)
 {
-	int ret = APP2EXT_SUCCESS;
-	char *passwd = NULL;
 	char *result = NULL;
 	char *device_node = NULL;
 
 	if (pkgid == NULL || temp_pkgid == NULL ||
-		temp_loopback_device == NULL) {
+		temp_loopback_device == NULL || passwd == NULL) {
 		_E("invalid argument");
 		return NULL;
-	}
-
-	/* get password for loopback encryption */
-	ret = _app2sd_initialize_db();
-	if (ret) {
-		_E("app2sd db initialize failed");
-		return NULL;
-	}
-
-	if ((passwd = _app2sd_get_password_from_db(pkgid)) == NULL) {
-		passwd = (char *)_app2sd_generate_password(pkgid);
-		if (NULL == passwd) {
-			_E("unable to generate password");
-			return NULL;
-		} else {
-			if ((ret = _app2sd_set_password_in_db(pkgid,
-				passwd)) < 0) {
-				_E("unable to save password");
-				free(passwd);
-				passwd = NULL;
-				return NULL;
-			}
-		}
 	}
 
 	/* get free device node*/
 	device_node = _app2sd_create_loopdevice_node();
 	if (NULL == device_node) {
-		free(passwd);
-		passwd = NULL;
 		_E("unable to find free loopback node");
 		return NULL;
 	}
@@ -297,22 +270,16 @@ char *_app2sd_do_loopback_duplicate_encryption_setup(const char *pkgid,
 		temp_loopback_device, passwd);
 	if (result == NULL) {
 		_E("encryption failed");
-		free(passwd);
-		passwd = NULL;
 		return NULL;
 	} else {
 		if (strlen(result) == 0) {
 			free(result);
 			result = NULL;
-			free(passwd);
-			passwd = NULL;
 			return device_node;
 		} else {
 			_E("error is (%s)", result);
 			free(result);
 			result = NULL;
-			free(passwd);
-			passwd = NULL;
 			return NULL;
 		}
 	}
@@ -718,7 +685,7 @@ int _app2sd_move_app_to_external(const char *pkgid, GList* dir_list, uid_t uid)
 		_W("Already %s entry is present in the SD Card, " \
 			"delete entry and go on without return", pkgid);
 		fclose(fp);
-		_app2sd_force_clean(pkgid, application_path, loopback_device);
+		_app2sd_force_clean(pkgid, application_path, loopback_device, uid);
 	}
 
 	snprintf(application_mmc_path, FILENAME_MAX - 1, "%s/.mmc",
@@ -1219,6 +1186,7 @@ int _app2sd_duplicate_device(const char *pkgid,
 	char *devi = NULL;
 	int err_res = 0;
 	char *result = NULL;
+	char *passwd = NULL;
 
 	/* create a new loopback device */
 	ret = _app2sd_create_loopback_device(temp_pkgid,
@@ -1228,15 +1196,41 @@ int _app2sd_duplicate_device(const char *pkgid,
 		return ret;
 	}
 
+	/* get password for loopback encryption */
+	ret = _app2sd_initialize_db();
+	if (ret) {
+		_E("app2sd db initialize failed");
+		return APP2EXT_ERROR_DB_INITIALIZE;
+	}
+
+	if ((passwd = _app2sd_get_password_from_db(pkgid, uid)) == NULL) {
+		passwd = (char *)_app2sd_generate_password(pkgid);
+		if (NULL == passwd) {
+			_E("unable to generate password");
+			return APP2EXT_ERROR_PASSWD_GENERATION;
+		} else {
+			if ((ret = _app2sd_set_info_in_db(pkgid,
+				passwd, loopback_device, uid)) < 0) {
+				_E("unable to save info");
+				free(passwd);
+				passwd = NULL;
+				return APP2EXT_ERROR_SQLITE_REGISTRY;
+			}
+		}
+	}
+
 	/* perform loopback encryption setup */
 	dev_node = _app2sd_do_loopback_duplicate_encryption_setup(pkgid,
-		temp_pkgid, temp_loopback_device, uid);
+		temp_pkgid, temp_loopback_device, passwd, uid);
 	if (!dev_node) {
 		_E("losetup failed, device node is (%s)", dev_node);
 		_app2sd_delete_loopback_device(loopback_device);
-		_E("create ext filesystem failed");
+		free(passwd);
+		passwd = NULL;
 		return APP2EXT_ERROR_DO_LOSETUP;
 	}
+	free(passwd);
+	passwd = NULL;
 	_D("duplicate setup SUCCESS");
 
 	/* check whether loopback device is associated with
@@ -1426,7 +1420,7 @@ FINISH_OFF:
 }
 
 int _app2sd_force_clean(const char *pkgid, const char *application_path,
-		const char *loopback_device)
+		const char *loopback_device, uid_t uid)
 {
 	int ret = APP2EXT_SUCCESS;
 
@@ -1456,9 +1450,9 @@ int _app2sd_force_clean(const char *pkgid, const char *application_path,
 	if (ret) {
 		_E("app2sd db initialize failed");
 	}
-	ret = _app2sd_remove_password_from_db(pkgid);
+	ret = _app2sd_remove_info_from_db(pkgid, uid);
 	if (ret) {
-		_E("cannot remove password from db");
+		_E("cannot remove info from db");
 	}
 
 	return ret;
