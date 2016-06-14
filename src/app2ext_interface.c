@@ -45,7 +45,7 @@ app2ext_handle *app2ext_init(int storage_type)
 		_E("invalid function arguments");
 		return NULL;
 	}
-	if (storage_type != APP2EXT_SD_CARD ) {
+	if (storage_type != APP2EXT_SD_CARD) {
 		_E("storage type currently not supported");
 		return NULL;
 	}
@@ -91,7 +91,7 @@ app2ext_handle *app2ext_init(int storage_type)
 int app2ext_deinit(app2ext_handle *handle)
 {
 	/* validate the function parameter recieved */
-	if (handle == NULL || handle->plugin_handle == NULL){
+	if (handle == NULL || handle->plugin_handle == NULL) {
 		_E("invalid function arguments");
 		return -1;
 	}
@@ -133,9 +133,9 @@ int app2ext_usr_get_app_location(const char *pkgid, uid_t uid)
 		tzplatform_reset_user();
 	}
 	encoded_id = _app2sd_get_encoded_name(pkgid, uid);
-	if (encoded_id == NULL) {
+	if (encoded_id == NULL)
 		return -1;
-	}
+
 	snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s",
 		APP2SD_PATH, encoded_id);
 	free(encoded_id);
@@ -185,7 +185,7 @@ int app2ext_get_app_location(const char *pkgid)
 int app2ext_usr_enable_external_pkg(const char *pkgid, uid_t uid)
 {
 	FILE *fp = NULL;
-	app2ext_handle *app2_handle = NULL;
+	app2ext_handle *handle = NULL;
 	char loopback_device[FILENAME_MAX] = { 0, };
 	char *encoded_id = NULL;
 
@@ -196,9 +196,9 @@ int app2ext_usr_enable_external_pkg(const char *pkgid, uid_t uid)
 	}
 
 	encoded_id = _app2sd_get_encoded_name(pkgid, uid);
-	if (encoded_id == NULL) {
+	if (encoded_id == NULL)
 		return -1;
-	}
+
 	snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s",
 		APP2SD_PATH, encoded_id);
 	free(encoded_id);
@@ -209,14 +209,14 @@ int app2ext_usr_enable_external_pkg(const char *pkgid, uid_t uid)
 		fclose(fp);
 		fp = NULL;
 
-		app2_handle = app2ext_init(APP2EXT_SD_CARD);
-		if (app2_handle == NULL) {
+		handle = app2ext_init(APP2EXT_SD_CARD);
+		if (handle == NULL) {
 			_E("app2ext init failed");
 			return -1;
 		}
 
-		app2_handle->interface.client_usr_enable(pkgid, uid);
-		app2ext_deinit(app2_handle);
+		handle->interface.client_usr_enable(pkgid, uid);
+		app2ext_deinit(handle);
 	}
 
 	return 0;
@@ -234,7 +234,7 @@ int app2ext_enable_external_pkg(const char *pkgid)
 int app2ext_usr_disable_external_pkg(const char *pkgid, uid_t uid)
 {
 	FILE *fp = NULL;
-	app2ext_handle *app2_handle = NULL;
+	app2ext_handle *handle = NULL;
 	char loopback_device[FILENAME_MAX] = { 0, };
 	char *encoded_id = NULL;
 
@@ -245,9 +245,9 @@ int app2ext_usr_disable_external_pkg(const char *pkgid, uid_t uid)
 	}
 
 	encoded_id = _app2sd_get_encoded_name(pkgid, uid);
-	if (encoded_id == NULL) {
+	if (encoded_id == NULL)
 		return -1;
-	}
+
 	snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s",
 		APP2SD_PATH, encoded_id);
 	free(encoded_id);
@@ -258,14 +258,14 @@ int app2ext_usr_disable_external_pkg(const char *pkgid, uid_t uid)
 		fclose(fp);
 		fp = NULL;
 
-		app2_handle = app2ext_init(APP2EXT_SD_CARD);
-		if (app2_handle == NULL) {
+		handle = app2ext_init(APP2EXT_SD_CARD);
+		if (handle == NULL) {
 			_E("app2ext init failed");
 			return -1;
 		}
 
-		app2_handle->interface.client_usr_disable(pkgid, uid);
-		app2ext_deinit(app2_handle);
+		handle->interface.client_usr_disable(pkgid, uid);
+		app2ext_deinit(handle);
 	}
 
 	return 0;
@@ -280,9 +280,55 @@ int app2ext_disable_external_pkg(const char *pkgid)
 	return ret;
 }
 
+int app2ext_enable_external_full_pkg(void)
+{
+	int ret = 0;
+	app2ext_handle *handle = NULL;
+
+	if (getuid() >= REGULAR_USER)
+		return 0;
+
+	handle = app2ext_init(APP2EXT_SD_CARD);
+	if (handle == NULL) {
+		_E("app2ext init failed");
+		return -1;
+	}
+
+	ret = handle->interface.client_enable_full_pkg();
+	if (ret != 0)
+		_E("failed to enable entire pkgs");
+
+	app2ext_deinit(handle);
+
+	return 0;
+}
+
+int app2ext_disable_external_full_pkg(void)
+{
+	int ret = 0;
+	app2ext_handle *handle = NULL;
+
+	if (getuid() >= REGULAR_USER)
+		return 0;
+
+	handle = app2ext_init(APP2EXT_SD_CARD);
+	if (handle == NULL) {
+		_E("app2ext init failed");
+		return -1;
+	}
+
+	ret = handle->interface.client_disable_full_pkg();
+	if (ret != 0)
+		_E("failed to disable entire pkgs");
+
+	app2ext_deinit(handle);
+
+	return 0;
+}
+
 int app2ext_usr_force_clean_pkg(const char *pkgid, uid_t uid)
 {
-	app2ext_handle *app2_handle = NULL;
+	app2ext_handle *handle = NULL;
 
 	/* validate the function parameter received */
 	if (pkgid == NULL || uid < 0) {
@@ -290,14 +336,14 @@ int app2ext_usr_force_clean_pkg(const char *pkgid, uid_t uid)
 		return -1;
 	}
 
-	app2_handle = app2ext_init(APP2EXT_SD_CARD);
-	if (app2_handle == NULL) {
+	handle = app2ext_init(APP2EXT_SD_CARD);
+	if (handle == NULL) {
 		_E("app2ext init failed");
 		return -1;
 	}
 
-	app2_handle->interface.client_usr_force_clean(pkgid, uid);
-	app2ext_deinit(app2_handle);
+	handle->interface.client_usr_force_clean(pkgid, uid);
+	app2ext_deinit(handle);
 
 	return 0;
 }

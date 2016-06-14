@@ -130,7 +130,6 @@ typedef enum app2ext_error_t {
 	APP2EXT_ERROR_STRCMP_FAILED,
 	APP2EXT_ERROR_INVALID_PACKAGE,
 	APP2EXT_ERROR_CREATE_DIR_ENTRY,
-	APP2EXT_ERROR_PASSWORD_GENERATION,
 	APP2EXT_ERROR_COPY_DIRECTORY,
 	APP2EXT_ERROR_INVALID_CASE,
 	APP2EXT_ERROR_SYMLINK_ALREADY_EXISTS,
@@ -160,11 +159,11 @@ typedef enum app2ext_error_t {
 } app2ext_error;
 
 /**
- * @brief :This function type is for a function that is implemented by plugin
+ * @brief : This function type is for a function that is implemented by plugin
  * and called before application is to be installed.
  *
- * @param[in] 	appname		application package name which is to be installed
- * @param[in] 	dir_list	directory structure of the application
+ * @param[in]   appname         application package name which is to be installed
+ * @param[in]   dir_list        directory structure of the application
  *                              This should be polulated by the package manager
  *                              before calling pre_install and should be freed after
  *                              pre_install returns.
@@ -172,9 +171,9 @@ typedef enum app2ext_error_t {
  *                              which has members Name(dirname) and Type (RO/RW)
  *                              For eg for rpm the dir_list should be populated with
  *                              nodes like : (lib, APP2EXT_DIR_RO), (res, APP2EXT_DIR_RO),
-                                (bin, APP2EXT_DIR_RO), (data, APP2EXT_DIR_RW)
- * @param[in]	size		Size of the application
- * @return 	0 if success,  error code(>0) if fail
+ *                              (bin, APP2EXT_DIR_RO), (data, APP2EXT_DIR_RW)
+ * @param[in]   size            Size of the application
+ * @return      0 if success, error code(>0) if fail
  */
 typedef int (*app2ext_client_usr_pre_install)(const char *appname, GList* dir_list,
 		int size, uid_t uid);
@@ -182,14 +181,14 @@ typedef int (*app2ext_client_pre_install)(const char *appname, GList* dir_list,
 		int size);
 
 /**
- * @brief :This function type is for a function that is implemented by plugin
+ * @brief : This function type is for a function that is implemented by plugin
  * and called after application installation.
  *
- * @param[in] 	appname		application package name which is to be installed
- * @param[in]	install_status	Installation status (Success/Failure)
- *				[ Enum :APP2EXT_STATUS_SUCCESS,
- *					APP2EXT_STATUS_FAILED]
- * @return 	0 if success,  error code(>0) if fail
+ * @param[in]   appname         application package name which is to be installed
+ * @param[in]   install_status  Installation status (Success/Failure)
+ *                              [ Enum :APP2EXT_STATUS_SUCCESS,
+ *                              APP2EXT_STATUS_FAILED]
+ * @return      0 if success, error code(>0) if fail
  */
 typedef int (*app2ext_client_usr_post_install)(const char *appname,
 		app2ext_status install_status, uid_t uid);
@@ -197,11 +196,11 @@ typedef int (*app2ext_client_post_install)(const char *appname,
 		app2ext_status install_status);
 
 /**
- * @brief :This function type is for a function that is implemented by plugin
+ * @brief : This function type is for a function that is implemented by plugin
  * and called before application upgrade.
  *
- * @param[in] 	appname		application package name which is to be upgraded
- * @param[in] 	dir_list	directory structure of the application
+ * @param[in]   appname         application package name which is to be upgraded
+ * @param[in]   dir_list        directory structure of the application
  *                              This should be polulated by the package manager
  *                              before calling pre_upgrade and should be freed after
  *                              pre_upgrade returns.
@@ -209,9 +208,9 @@ typedef int (*app2ext_client_post_install)(const char *appname,
  *                              which has members Name(dirname) and Type (RO/RW)
  *                              For eg for rpm the dir_list should be populated with
  *                              nodes like : (lib, APP2EXT_DIR_RO), (res, APP2EXT_DIR_RO),
-                                (bin, APP2EXT_DIR_RO), (data, APP2EXT_DIR_RW)
- * @param[in]	size		Size of the application
- * @return 	0 if success,  error code(>0) if fail
+ *                              (bin, APP2EXT_DIR_RO), (data, APP2EXT_DIR_RW)
+ * @param[in]   size            Size of the application
+ * @return      0 if success,  error code(>0) if fail
  */
 typedef int (*app2ext_client_usr_pre_upgrade)(const char *appname, GList* dir_list,
 		int size, uid_t uid);
@@ -219,14 +218,14 @@ typedef int (*app2ext_client_pre_upgrade)(const char *appname, GList* dir_list,
 		int size);
 
 /**
- * @brief :This function type is for a function that is implemented by plugin
+ * @brief : This function type is for a function that is implemented by plugin
  * and called before application upgradation.
  *
- * @param[in] 	appname		application package name which is to be upgraded
- * @param[in]	upgrade_status	Upgrade status (Success/Failure)
- *				[ Enum :APP2EXT_STATUS_SUCCESS,
- *					APP2EXT_STATUS_FAILED]
- * @return 	0 if success,  error code(>0) if fail
+ * @param[in]   appname         application package name which is to be upgraded
+ * @param[in]   upgrade_status  Upgrade status (Success/Failure)
+ *                              [ Enum :APP2EXT_STATUS_SUCCESS,
+ *                                      APP2EXT_STATUS_FAILED]
+ * @return      0 if success, error code(>0) if fail
  */
 typedef int (*app2ext_client_usr_post_upgrade)(const char *appname,
 		app2ext_status upgrade_status, uid_t uid);
@@ -234,32 +233,32 @@ typedef int (*app2ext_client_post_upgrade)(const char *appname,
 		app2ext_status upgrade_status);
 
 /**
- * @brief :This function type is for a function that is implemented by plugin
+ * @brief : This function type is for a function that is implemented by plugin
  * and called before application uninstallation.
  *
- * @param[in] 	appname		application package name which is to be uninstalled
- * @return 	0 if success,  error code(>0) if fail
+ * @param[in]   appname         application package name which is to be uninstalled
+ * @return      0 if success, error code(>0) if fail
  */
 typedef int (*app2ext_client_usr_pre_uninstall)(const char *appname, uid_t uid);
 typedef int (*app2ext_client_pre_uninstall)(const char *appname);
 
 /**
- * @brief :This function type is for a function that is implemented by plugin
+ * @brief : This function type is for a function that is implemented by plugin
  * and called after application uninstallation.
  *
- * @param[in] 	appname		application package name which is to be uninstalled
- * @return 	0 if success,  error code(>0) if fail
+ * @param[in]   appname         application package name which is to be uninstalled
+ * @return      0 if success, error code(>0) if fail
  */
 typedef int (*app2ext_client_usr_post_uninstall)(const char *appname, uid_t uid);
 typedef int (*app2ext_client_post_uninstall)(const char *appname);
 
 /**
- * @brief :This function type is for a function that is implemented by plugin
+ * @brief : This function type is for a function that is implemented by plugin
  * and called when application is to be moved from extrenal memory
  *to internal memory or vice versa.
  *
- * @param[in] 	appname		application package name which is to be moved
- * @param[in] 	dir_list	directory structure of the application
+ * @param[in]   appname         application package name which is to be moved
+ * @param[in]   dir_list        directory structure of the application
  *                              This should be polulated by the package manager
  *                              before calling move and should be freed after
  *                              move returns.
@@ -267,10 +266,10 @@ typedef int (*app2ext_client_post_uninstall)(const char *appname);
  *                              which has members Name(dirname) and Type (RO/RW)
  *                              For eg for rpm the dir_list should be populated with
  *                              nodes like : (lib, APP2EXT_DIR_RO), (res, APP2EXT_DIR_RO),
-                                (bin, APP2EXT_DIR_RO), (data, APP2EXT_DIR_RW)
- * @param[in]	move_type	move type
- *				[Enum: APP2EXT_MOVE_TO_EXT, APP2EXT_MOVE_TO_PHONE]
- * @return 	0 if success,  error code(>0) if fail
+ *                              (bin, APP2EXT_DIR_RO), (data, APP2EXT_DIR_RW)
+ * @param[in]   move_type       move type
+ *                              [Enum: APP2EXT_MOVE_TO_EXT, APP2EXT_MOVE_TO_PHONE]
+ * @return      0 if success, error code(>0) if fail
  */
 typedef int (*app2ext_client_usr_move)(const char *appname, GList* dir_list,
 		app2ext_move_type move_type, uid_t uid);
@@ -278,31 +277,40 @@ typedef int (*app2ext_client_move)(const char *appname, GList* dir_list,
 		app2ext_move_type move_type);
 
 /**
- * @brief :This function type is for a function that is implemented by plugin
+ * @brief : This function type is for a function that is implemented by plugin
  * and called to enable application before application launch.
  *
- * @param[in] 	appname		application package name which is to be enabled
- * @return 	0 if success,  error code(>0) if fail
+ * @param[in]   appname         application package name which is to be enabled
+ * @return      0 if success, error code(>0) if fail
  */
 typedef int (*app2ext_client_usr_enable)(const char *appname, uid_t uid);
 typedef int (*app2ext_client_enable)(const char *appname);
 
 /**
- * @brief :This function type is for a function that is implemented by plugin
+ * @brief : This function type is for a function that is implemented by plugin
+ * and called to enable/disable entire application packages.
+ *
+ * @return      0 if success, error code(>0) if fail
+ */
+typedef int (*app2ext_client_enable_full_pkg)(void);
+typedef int (*app2ext_client_disable_full_pkg)(void);
+
+/**
+ * @brief : This function type is for a function that is implemented by plugin
  * and called to disable application before application exit.
  *
- * @param[in] 	appname		application package name which is to be disabled
- * @return 	0 if success,  error code(>0) if fail
+ * @param[in]   appname         application package name which is to be disabled
+ * @return      0 if success, error code(>0) if fail
  */
 typedef int (*app2ext_client_usr_disable)(const char *appname, uid_t uid);
 typedef int (*app2ext_client_disable)(const char *appname);
 
 /**
- * @brief :This function type is for a function that is implemented by plugin
+ * @brief : This function type is for a function that is implemented by plugin
  * and called after application uninstallation.
  *
- * @param[in] 	pkgid		application package name which is to be uninstalled
- * @return 	0 if success,  error code(>0) if fail
+ * @param[in]   pkgid           application package name which is to be uninstalled
+ * @return      0 if success, error code(>0) if fail
  */
 typedef int (*app2ext_client_usr_force_clean)(const char *pkgid, uid_t uid);
 typedef int (*app2ext_client_force_clean)(const char *pkgid);
@@ -321,6 +329,8 @@ typedef struct app2ext_interface_t {
 	app2ext_client_force_clean		client_force_clean;
 	app2ext_client_enable			client_enable;
 	app2ext_client_disable			client_disable;
+	app2ext_client_enable_full_pkg		client_enable_full_pkg;
+	app2ext_client_disable_full_pkg		client_disable_full_pkg;
 	app2ext_client_move			client_move;
 
 	app2ext_client_usr_pre_install		client_usr_pre_install;
@@ -337,20 +347,20 @@ typedef struct app2ext_interface_t {
 
 /**
  * This structure defines app2ext handle .Each storage type maps to a different plugin
- * type			: storage type,
- * plugin_handle	: plugin handle, need to close dlopen handle
- * interface		: inteface with plugin library
+ * type                 : storage type,
+ * plugin_handle        : plugin handle, need to close dlopen handle
+ * interface            : inteface with plugin library
  */
 typedef struct {
-	app2ext_install_location 	type;
+	app2ext_install_location	type;
 	void				*plugin_handle;
-	app2ext_interface 		interface;
+	app2ext_interface		interface;
 } app2ext_handle;
 
 /**
  * This structure defines directory details
- * name			: directory name
- * type			: permission (rw/ro)
+ * name                 : directory name
+ * type                 : permission (rw/ro)
  */
 typedef struct {
 	char			*name;
@@ -359,33 +369,33 @@ typedef struct {
 
 /**
  * @brief : This API initializes the appropriate plugin based on storage type.
- *	It should be called before installation/uninstallation/upgrade
- * @param[in] storage_type	Location where package should be installed
- *				[Ex: SD card, MicroUSB, Cloud]
- * @return	app2ext_handle pointer if success, NULL if fail
+ *         It should be called before installation/uninstallation/upgrade
+ * @param[in] storage_type      Location where package should be installed
+ *                              [Ex: SD card, MicroUSB, Cloud]
+ * @return      app2ext_handle pointer if success, NULL if fail
  *
  */
 API app2ext_handle *app2ext_init(int storage_type);
 
 /**
  * @brief : This API deinitializes the plugin
- *	    This should be called when use of the plugin is completed
- * @param[in] handle	pointer to app2ext_handle which is to be deinitialized
- * @pre		Initialization is done for the storage handle
- * @return	0 if success,  error < 0 if fail
+ *         This should be called when use of the plugin is completed
+ * @param[in] handle    pointer to app2ext_handle which is to be deinitialized
+ * @pre         Initialization is done for the storage handle
+ * @return      0 if success, error < 0 if fail
  *
  */
 API int app2ext_deinit(app2ext_handle *handle);
 
 /**
  * @brief : This API returns the application location by refering to package manager DB
- *	This should be called to know location of an application package
- * @param[in] pkgid	package id
- * @param[in] uid	target user id of this instruction
- * @return	APP2EXT_SD_CARD if pkg is in SD card,
- *		APP2EXT_INTERNAL_MEM if pkg is in internal memory,
- *		APP2EXT_NOT_INSTALLED if there is no valid pkg path
- *		error < 0 if fail
+ *         This should be called to know location of an application package
+ * @param[in] pkgid     package id
+ * @param[in] uid       target user id of this instruction
+ * @return      APP2EXT_SD_CARD if pkg is in SD card,
+ *              APP2EXT_INTERNAL_MEM if pkg is in internal memory,
+ *              APP2EXT_NOT_INSTALLED if there is no valid pkg path
+ *              error < 0 if fail
  *@remarks see app2ext_install_location for more details
  */
 API int app2ext_get_app_location(const char *pkgid);
@@ -393,30 +403,37 @@ API int app2ext_usr_get_app_location(const char *pkgid, uid_t uid);
 
 /**
  * @brief : This API enable the package which is located in external memory
- * @param[in] pkgid	package id
- * @param[in] uid	target user id of this instruction
- * @return	error < 0  if pkg enable fail ,
+ * @param[in] pkgid     package id
+ * @param[in] uid       target user id of this instruction
+ * @return      error < 0 if pkg enable fail
  */
 API int app2ext_enable_external_pkg(const char *pkgid);
 API int app2ext_usr_enable_external_pkg(const char *pkgid, uid_t uid);
 
 /**
  * @brief : This API disable the package which is located in external memory
- * @param[in] pkgid	package id
- * @param[in] uid	target user id of this instruction
- * @return	error < 0  if pkg enable fail ,
+ * @param[in] pkgid     package id
+ * @param[in] uid       target user id of this instruction
+ * @return      error < 0 if pkg disable fail
  */
 API int app2ext_disable_external_pkg(const char *pkgid);
 API int app2ext_usr_disable_external_pkg(const char *pkgid, uid_t uid);
 
 /**
  * @brief : This API clean the directory and symbolic link which are made by app2ext
- * @param[in] pkgid	package id
- * @param[in] uid	target user id of this instruction
- * @return	error < 0  if pkg enable fail ,
+ * @param[in] pkgid     package id
+ * @param[in] uid       target user id of this instruction
+ * @return      error < 0 if pkg clean fail
  */
 API int app2ext_force_clean_pkg(const char *pkgid);
 API int app2ext_usr_force_clean_pkg(const char *pkgid, uid_t uid);
+
+/**
+ * @brief : This API mount/unmount all entries which are located in external memory
+ * @return      error < 0 if fail to start enable/disable
+ */
+API int app2ext_enable_external_full_pkg(void);
+API int app2ext_disable_external_full_pkg(void);
 
 #ifdef __cplusplus
 }

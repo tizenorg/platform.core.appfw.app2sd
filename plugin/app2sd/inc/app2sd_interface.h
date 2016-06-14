@@ -32,13 +32,13 @@ extern "C" {
 #include "app2ext_utils.h"
 
 int app2sd_usr_pre_app_install(const char *pkgid,
-		GList* dir_list, int size, uid_t uid);
+		GList *dir_list, int size, uid_t uid);
 
 int app2sd_usr_post_app_install(const char *pkgid,
 		app2ext_status install_status, uid_t uid);
 
 int app2sd_usr_pre_app_upgrade(const char *pkgid,
-		GList* dir_list, int size, uid_t uid);
+		GList *dir_list, int size, uid_t uid);
 
 int app2sd_usr_post_app_upgrade(const char *pkgid,
 		app2ext_status upgrade_status, uid_t uid);
@@ -48,13 +48,17 @@ int app2sd_usr_pre_app_uninstall(const char *pkgid, uid_t uid);
 int app2sd_usr_post_app_uninstall(const char *pkgid, uid_t uid);
 
 int app2sd_usr_move_installed_app(const char *pkgid,
-		GList* dir_list, app2ext_move_type move_type, uid_t uid);
+		GList *dir_list, app2ext_move_type move_type, uid_t uid);
 
 int app2sd_usr_on_demand_setup_init(const char *pkgid, uid_t uid);
 
 int app2sd_usr_on_demand_setup_exit(const char *pkgid, uid_t uid);
 
 int app2sd_usr_force_clean(const char *pkgid, uid_t uid);
+
+int app2sd_enable_full_pkg(void);
+
+int app2sd_disable_full_pkg(void);
 
 #ifdef __cplusplus
 }
