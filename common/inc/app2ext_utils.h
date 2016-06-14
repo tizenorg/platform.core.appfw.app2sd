@@ -51,6 +51,7 @@ extern "C" {
 #define APP2EXT_SUCCESS 0
 
 #define OWNER_ROOT 0
+#define REGULAR_USER 5000
 #define GLOBAL_USER tzplatform_getuid(TZ_SYS_GLOBALAPP_USER)
 #define MMC_PATH tzplatform_mkpath(TZ_SYS_MEDIA, "SDCardA1")
 #define APP2SD_PATH tzplatform_mkpath(TZ_SYS_MEDIA, "SDCardA1/app2sd")

@@ -56,6 +56,10 @@ int app2sd_usr_on_demand_setup_exit(const char *pkgid, uid_t uid);
 
 int app2sd_usr_force_clean(const char *pkgid, uid_t uid);
 
+int app2sd_enable_full_pkg(void);
+
+int app2sd_disable_full_pkg(void);
+
 #ifdef __cplusplus
 }
 #endif

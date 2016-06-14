@@ -171,6 +171,12 @@ static const gchar introspection_xml[] =
 "			<arg type='i' name='uid' direction='in'/>"
 "			<arg type='i' name='result' direction='out'/>"
 "		</method>"
+"		<method name='EnableFullPkg'>"
+"			<arg type='i' name='result' direction='out'/>"
+"		</method>"
+"		<method name='DisableFullPkg'>"
+"			<arg type='i' name='result' direction='out'/>"
+"		</method>"
 "	</interface>"
 "</node>";
 
@@ -568,7 +574,7 @@ static void _app2sd_server_move_installed_app(GDBusConnection *connection, const
 	g_dbus_method_invocation_return_value(invocation, param);
 }
 
-static void _app2sd_server_ondemand_force_clean(GDBusConnection *connection, const gchar *sender,
+static void _app2sd_server_force_clean(GDBusConnection *connection, const gchar *sender,
 	GVariant *parameters, GDBusMethodInvocation *invocation, uid_t sender_uid)
 {
 	GVariant *param = NULL;
@@ -590,6 +596,58 @@ static void _app2sd_server_ondemand_force_clean(GDBusConnection *connection, con
 	}
 
 	ret = app2sd_usr_force_clean(pkgid, target_uid);
+	if (ret) {
+		_E("error(%d)", ret);
+		result = ret;
+	}
+
+	param = g_variant_new("(i)", result);
+	g_dbus_method_invocation_return_value(invocation, param);
+}
+
+static void _app2sd_server_enable_full_pkg(GDBusConnection *connection, const gchar *sender,
+	GVariant *parameters, GDBusMethodInvocation *invocation, uid_t sender_uid)
+{
+	GVariant *param = NULL;
+	int result = APP2EXT_SUCCESS;
+	int ret = 0;
+
+	_D("sender_uid(%d)", sender_uid);
+
+	if (sender_uid >= REGULAR_USER) {
+		_E("Not permitted user!");
+		_app2sd_server_return_method_error(invocation,
+			APP2EXT_ERROR_OPERATION_NOT_PERMITTED);
+		return;
+	}
+
+	ret = app2sd_enable_full_pkg();
+	if (ret) {
+		_E("error(%d)", ret);
+		result = ret;
+	}
+
+	param = g_variant_new("(i)", result);
+	g_dbus_method_invocation_return_value(invocation, param);
+}
+
+static void _app2sd_server_disable_full_pkg(GDBusConnection *connection, const gchar *sender,
+	GVariant *parameters, GDBusMethodInvocation *invocation, uid_t sender_uid)
+{
+	GVariant *param = NULL;
+	int result = APP2EXT_SUCCESS;
+	int ret = 0;
+
+	_D("sender_uid(%d)", sender_uid);
+
+	if (sender_uid >= REGULAR_USER) {
+		_E("Not permitted user!");
+		_app2sd_server_return_method_error(invocation,
+			APP2EXT_ERROR_OPERATION_NOT_PERMITTED);
+		return;
+	}
+
+	ret = app2sd_disable_full_pkg();
 	if (ret) {
 		_E("error(%d)", ret);
 		result = ret;
@@ -637,7 +695,13 @@ static void handle_method_call(GDBusConnection *connection,
 		_app2sd_server_move_installed_app(connection, sender,
 			parameters, invocation, sender_uid);
 	} else if (g_strcmp0(method_name, "ForceClean") == 0) {
-		_app2sd_server_ondemand_force_clean(connection, sender,
+		_app2sd_server_force_clean(connection, sender,
+			parameters, invocation, sender_uid);
+	} else if (g_strcmp0(method_name, "EnableFullPkg") == 0) {
+		_app2sd_server_enable_full_pkg(connection, sender,
+			parameters, invocation, sender_uid);
+	} else if (g_strcmp0(method_name, "DisableFullPkg") == 0) {
+		_app2sd_server_disable_full_pkg(connection, sender,
 			parameters, invocation, sender_uid);
 	}
 
