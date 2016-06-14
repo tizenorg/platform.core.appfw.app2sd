@@ -51,6 +51,7 @@ extern "C" {
 #define APP2EXT_SUCCESS 0
 
 #define OWNER_ROOT 0
+#define REGULAR_USER 5000
 #define GLOBAL_USER tzplatform_getuid(TZ_SYS_GLOBALAPP_USER)
 #define MMC_PATH tzplatform_mkpath(TZ_SYS_MEDIA, "SDCardA1")
 #define APP2SD_PATH tzplatform_mkpath(TZ_SYS_MEDIA, "SDCardA1/app2sd")
@@ -62,7 +63,10 @@ extern "C" {
 #define DIR_PERMS (S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH)
 
 int _is_global(uid_t uid);
+
 char *_app2sd_get_encoded_name(const char *pkgid, uid_t uid);
+
+int _app2sd_delete_directory(const char *dirname);
 
 #ifdef __cplusplus
 }

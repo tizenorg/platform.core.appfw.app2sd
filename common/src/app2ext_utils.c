@@ -49,3 +49,52 @@ char *_app2sd_get_encoded_name(const char *pkgid, uid_t uid)
 
 	return new_name;
 }
+
+int _app2sd_delete_directory(const char *dirname)
+{
+	DIR *dp = NULL;
+	struct dirent ep;
+	struct dirent *er = NULL;
+	char abs_filename[FILENAME_MAX] = { 0, };
+	int ret = 0;
+
+	dp = opendir(dirname);
+	if (dp != NULL) {
+		while (readdir_r(dp, &ep, &er) == 0 && er != NULL) {
+			struct stat stFileInfo;
+
+			snprintf(abs_filename, FILENAME_MAX, "%s/%s", dirname,
+				ep.d_name);
+
+			if (lstat(abs_filename, &stFileInfo) < 0) {
+				perror(abs_filename);
+				(void)closedir(dp);
+				return -1;
+			}
+
+			if (S_ISDIR(stFileInfo.st_mode)) {
+				if (strcmp(ep.d_name, ".")
+				    && strcmp(ep.d_name, "..")) {
+					ret = _app2sd_delete_directory(abs_filename);
+					if (ret < 0) {
+						(void)closedir(dp);
+						return -1;
+					}
+				}
+			} else {
+				ret = remove(abs_filename);
+				if (ret < 0) {
+					(void)closedir(dp);
+					return -1;
+				}
+			}
+		}
+		(void)closedir(dp);
+		ret = remove(dirname);
+		if (ret < 0)
+			return -1;
+	} else {
+		_W("couldn't open the directory[%s]", dirname);
+	}
+	return 0;
+}
