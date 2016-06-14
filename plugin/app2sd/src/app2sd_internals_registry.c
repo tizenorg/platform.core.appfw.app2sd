@@ -37,8 +37,10 @@
 #define APP2SD_DB_FILE tzplatform_mkpath(TZ_SYS_DB, ".app2sd.db")
 sqlite3 *app2sd_db;
 #define QUERY_CREATE_TABLE_APP2SD "create table app2sd \
-	(pkgid text primary key,\
-	 password text\
+	(pkgid text primary key, \
+	 password text, \
+	 filename text, \
+	 uid integer \
 	)"
 
 int _app2sd_initialize_db()
@@ -82,7 +84,8 @@ int _app2sd_initialize_db()
 	return 0;
 }
 
-int _app2sd_set_password_in_db(const char *pkgid, const char *passwd)
+int _app2sd_set_password_in_db(const char *pkgid, const char *passwd,
+		const char *loopback_device, uid_t uid)
 {
 	char *error_message = NULL;
 	char *query = NULL;
@@ -102,7 +105,7 @@ int _app2sd_set_password_in_db(const char *pkgid, const char *passwd)
 	return APP2EXT_SUCCESS;
 }
 
-int _app2sd_remove_password_from_db(const char *pkgid)
+int _app2sd_remove_password_from_db(const char *pkgid, uid_t uid)
 {
 	char *error_message = NULL;
 	char *query = NULL;
@@ -123,7 +126,7 @@ int _app2sd_remove_password_from_db(const char *pkgid)
 	return APP2EXT_SUCCESS;
 }
 
-char *_app2sd_get_password_from_db(const char *pkgid)
+char *_app2sd_get_password_from_db(const char *pkgid, uid_t uid)
 {
 	char *query = NULL;
 	char *passwd = NULL;

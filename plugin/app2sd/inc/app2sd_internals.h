@@ -162,15 +162,16 @@ char *_app2sd_find_free_device(void);
 int _app2sd_initialize_db();
 
 /*This function is used to get password from db*/
-char *_app2sd_get_password_from_db(const char *pkgid);
+char *_app2sd_get_password_from_db(const char *pkgid, uid_t uid);
 
 /*This function removes password from db */
-int _app2sd_remove_password_from_db(const char *pkgid);
+int _app2sd_remove_password_from_db(const char *pkgid, uid_t uid);
 
 /* This functions saved password in db */
-int _app2sd_set_password_in_db(const char *pkgid, const char *passwd);
+int _app2sd_set_password_in_db(const char *pkgid, const char *passwd,
+		const char *loopback_device, uid_t uid);
 
 int _app2sd_force_clean(const char *pkgid, const char *application_path,
-		const char *loopback_device);
+		const char *loopback_device, uid_t uid);
 
 #endif
