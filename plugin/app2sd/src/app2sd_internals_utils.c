@@ -594,7 +594,7 @@ char *_app2sd_find_free_device(void)
 	return ret_result;
 }
 
-/*@_app2sd_generate_password
+/*
 * This is a simple password generator
 * return: On success, it will return the password, else NULL.
 */
@@ -612,7 +612,7 @@ char *_app2sd_generate_password(const char *pkgid)
 	int j = appname_len;
 	unsigned int seed;
 
-	/* Length of the password */
+	/* length of the password */
 	ret_result = (char*)malloc(PASSWD_LEN + 1);
 	if (NULL == ret_result) {
 		_E("unable to allocate memory");
