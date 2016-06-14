@@ -130,7 +130,6 @@ typedef enum app2ext_error_t {
 	APP2EXT_ERROR_STRCMP_FAILED,
 	APP2EXT_ERROR_INVALID_PACKAGE,
 	APP2EXT_ERROR_CREATE_DIR_ENTRY,
-	APP2EXT_ERROR_PASSWORD_GENERATION,
 	APP2EXT_ERROR_COPY_DIRECTORY,
 	APP2EXT_ERROR_INVALID_CASE,
 	APP2EXT_ERROR_SYMLINK_ALREADY_EXISTS,
@@ -289,6 +288,15 @@ typedef int (*app2ext_client_enable)(const char *appname);
 
 /**
  * @brief :This function type is for a function that is implemented by plugin
+ * and called to enable/disable entire application packages.
+ *
+ * @return	0 if success,  error code(>0) if fail
+ */
+typedef int (*app2ext_client_enable_full_pkg)(void);
+typedef int (*app2ext_client_disable_full_pkg)(void);
+
+/**
+ * @brief :This function type is for a function that is implemented by plugin
  * and called to disable application before application exit.
  *
  * @param[in] 	appname		application package name which is to be disabled
@@ -321,6 +329,8 @@ typedef struct app2ext_interface_t {
 	app2ext_client_force_clean		client_force_clean;
 	app2ext_client_enable			client_enable;
 	app2ext_client_disable			client_disable;
+	app2ext_client_enable_full_pkg		client_enable_full_pkg;
+	app2ext_client_disable_full_pkg		client_disable_full_pkg;
 	app2ext_client_move			client_move;
 
 	app2ext_client_usr_pre_install		client_usr_pre_install;
@@ -404,7 +414,7 @@ API int app2ext_usr_enable_external_pkg(const char *pkgid, uid_t uid);
  * @brief : This API disable the package which is located in external memory
  * @param[in] pkgid	package id
  * @param[in] uid	target user id of this instruction
- * @return	error < 0  if pkg enable fail ,
+ * @return	error < 0  if pkg disable fail ,
  */
 API int app2ext_disable_external_pkg(const char *pkgid);
 API int app2ext_usr_disable_external_pkg(const char *pkgid, uid_t uid);
@@ -413,10 +423,17 @@ API int app2ext_usr_disable_external_pkg(const char *pkgid, uid_t uid);
  * @brief : This API clean the directory and symbolic link which are made by app2ext
  * @param[in] pkgid	package id
  * @param[in] uid	target user id of this instruction
- * @return	error < 0  if pkg enable fail ,
+ * @return	error < 0  if pkg clean fail ,
  */
 API int app2ext_force_clean_pkg(const char *pkgid);
 API int app2ext_usr_force_clean_pkg(const char *pkgid, uid_t uid);
+
+/**
+ * @brief : This API mount/unmount all entries which are located in external memory
+ * @return	error < 0  if fail to start enable/disable,
+ */
+API int app2ext_enable_external_full_pkg(void);
+API int app2ext_disable_external_full_pkg(void);
 
 #ifdef __cplusplus
 }

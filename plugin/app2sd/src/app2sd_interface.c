@@ -276,8 +276,7 @@ int app2sd_usr_post_app_install(const char *pkgid,
 			_E("unable to delete the loopback device from the SD Card");
 			return APP2EXT_ERROR_DELETE_LOOPBACK_DEVICE;
 		}
-		ret = _app2sd_remove_password_from_db(pkgid);
-
+		ret = _app2sd_remove_password_from_db(pkgid, uid);
 		if (ret)
 			_E("unable to delete the password");
 
@@ -634,7 +633,7 @@ int app2sd_usr_post_app_uninstall(const char *pkgid, uid_t uid)
 		goto END;
 	}
 
-	ret = _app2sd_remove_password_from_db(pkgid);
+	ret = _app2sd_remove_password_from_db(pkgid, uid);
 	if (ret) {
 		_E("cannot remove password from db");
 		ret = APP2EXT_ERROR_SQLITE_REGISTRY;
@@ -1020,7 +1019,117 @@ int app2sd_usr_force_clean(const char *pkgid, uid_t uid)
 	}
 	free(encoded_id);
 
-	ret = _app2sd_force_clean(pkgid, application_path, loopback_device);
+	ret = _app2sd_force_clean(pkgid, application_path, loopback_device, uid);
 
 	return ret;
+}
+
+int app2sd_enable_full_pkg(void)
+{
+	int ret = APP2EXT_SUCCESS;
+	char buf[FILENAME_MAX] = { 0, };
+	char loopback_device[FILENAME_MAX] = { 0, };
+	DIR *dir = NULL;
+	struct dirent entry;
+	struct dirent *result = NULL;
+	char *pkgid = NULL;
+	uid_t uid = 0;
+
+	dir = opendir(APP2SD_PATH);
+	if (!dir) {
+		if (strerror_r(errno, buf, sizeof(buf)) == 0)
+			_E("failed to opendir (%s)", buf);
+		return APP2EXT_ERROR_OPEN_DIR;
+	}
+
+	for (ret = readdir_r(dir, &entry, &result);
+		ret == 0 && result != NULL;
+		ret = readdir_r(dir, &entry, &result)) {
+		if (strcmp(entry.d_name, ".") == 0 ||
+			strcmp(entry.d_name, "..") == 0)
+			continue;
+		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s",
+			APP2SD_PATH, entry.d_name);
+		_D("filename (%s)", loopback_device);
+		ret = _app2sd_get_info_from_db(loopback_device,
+			&pkgid, &uid);
+		if (ret) {
+			_E("failed to get info from db");
+			if (pkgid) {
+				free(pkgid);
+				pkgid = NULL;
+			}
+			return ret;
+		}
+		_D("pkgid(%s), uid(%d)", pkgid, uid);
+		/*
+		ret = app2sd_usr_on_demand_setup_init(pkgid, target_uid);
+		if (ret) {
+			_E("error(%d)", ret);
+			closedir(dir);
+			return ret;
+		}
+		*/
+		free(pkgid);
+		pkgid = NULL;
+	}
+
+	closedir(dir);
+
+	return APP2EXT_SUCCESS;
+}
+
+int app2sd_disable_full_pkg(void)
+{
+	int ret = APP2EXT_SUCCESS;
+	char buf[FILENAME_MAX] = { 0, };
+	char loopback_device[FILENAME_MAX] = { 0, };
+	DIR *dir = NULL;
+	struct dirent entry;
+	struct dirent *result = NULL;
+	char *pkgid = NULL;
+	uid_t uid = 0;
+
+	dir = opendir(APP2SD_PATH);
+	if (!dir) {
+		if (strerror_r(errno, buf, sizeof(buf)) == 0)
+			_E("failed to opendir (%s)", buf);
+		return APP2EXT_ERROR_OPEN_DIR;
+	}
+
+	for (ret = readdir_r(dir, &entry, &result);
+		ret == 0 && result != NULL;
+		ret = readdir_r(dir, &entry, &result)) {
+		if (strcmp(entry.d_name, ".") == 0 ||
+			strcmp(entry.d_name, "..") == 0)
+			continue;
+		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s",
+			APP2SD_PATH, entry.d_name);
+		_D("filename (%s)", loopback_device);
+		ret = _app2sd_get_info_from_db(loopback_device,
+			&pkgid, &uid);
+		if (ret) {
+			_E("failed to get info from db");
+			if (pkgid) {
+				free(pkgid);
+				pkgid = NULL;
+			}
+			return ret;
+		}
+		_D("pkgid(%s), uid(%d)", pkgid, uid);
+		/*
+		ret = app2sd_usr_on_demand_setup_exit(pkgid, target_uid);
+		if (ret) {
+			_E("error(%d)", ret);
+			closedir(dir);
+			return ret;
+		}
+		*/
+		free(pkgid);
+		pkgid = NULL;
+	}
+
+	closedir(dir);
+
+	return APP2EXT_SUCCESS;
 }
