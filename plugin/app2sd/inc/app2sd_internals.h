@@ -53,13 +53,13 @@
 #include "app2sd_interface.h"
 
 #define BUF_SIZE 256
-#define MEM_BUF_SIZE 	5	/*Memory buffer size in MB*/
-#define PKG_BUF_SIZE 	2	/*Memory buffer size in MB*/
+#define MEM_BUF_SIZE 5 /* Memory buffer size in MB */
+#define PKG_BUF_SIZE 2 /* Memory buffer size in MB */
 
 /*Device entry defines*/
-#define DEV_MAJOR		7
+#define DEV_MAJOR 7
 
-#define FS_TYPE		"ext4"
+#define FS_TYPE "ext4"
 #define INTERNAL_STORAGE_PATH "/opt"
 
 typedef enum mount_type_t {
@@ -81,10 +81,7 @@ int _app2sd_get_available_free_memory(const char *sd_path, int *free_mem);
 
 /*Function to move the application from/to SD Card*/
 int _app2sd_usr_move_app(const char *pkgid, app2ext_move_type move_cmd,
-		GList* dir_list, uid_t uid);
-
-/*utility to delete the directory*/
-int _app2sd_delete_directory(const char *dirname);
+		GList *dir_list, uid_t uid);
 
 /*utility to delete symbolic link*/
 void _app2sd_delete_symlink(const char *dirname);
@@ -162,15 +159,18 @@ char *_app2sd_find_free_device(void);
 int _app2sd_initialize_db();
 
 /*This function is used to get password from db*/
-char *_app2sd_get_password_from_db(const char *pkgid);
+char *_app2sd_get_password_from_db(const char *pkgid, uid_t uid);
 
-/*This function removes password from db */
-int _app2sd_remove_password_from_db(const char *pkgid);
+/*This function removes info from db */
+int _app2sd_remove_info_from_db(const char *pkgid, uid_t uid);
 
-/* This functions saved password in db */
-int _app2sd_set_password_in_db(const char *pkgid, const char *passwd);
+/* This functions save info in db */
+int _app2sd_set_info_in_db(const char *pkgid, const char *passwd,
+		const char *loopback_device, uid_t uid);
+
+int _app2sd_get_info_from_db(const char *filename, char **pkgid, uid_t *uid);
 
 int _app2sd_force_clean(const char *pkgid, const char *application_path,
-		const char *loopback_device);
+		const char *loopback_device, uid_t uid);
 
 #endif

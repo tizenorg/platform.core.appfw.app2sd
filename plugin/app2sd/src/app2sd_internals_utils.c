@@ -133,55 +133,6 @@ int _app2sd_get_available_free_memory(const char *sd_path, int *free_mem)
 	return 0;
 }
 
-int _app2sd_delete_directory(const char *dirname)
-{
-	DIR *dp = NULL;
-	struct dirent ep;
-	struct dirent *er = NULL;
-	char abs_filename[FILENAME_MAX] = { 0, };
-	int ret = 0;
-
-	dp = opendir(dirname);
-	if (dp != NULL) {
-		while (readdir_r(dp, &ep, &er) == 0 && er != NULL) {
-			struct stat stFileInfo;
-
-			snprintf(abs_filename, FILENAME_MAX, "%s/%s", dirname,
-				ep.d_name);
-
-			if (lstat(abs_filename, &stFileInfo) < 0) {
-				perror(abs_filename);
-				(void)closedir(dp);
-				return -1;
-			}
-
-			if (S_ISDIR(stFileInfo.st_mode)) {
-				if (strcmp(ep.d_name, ".")
-				    && strcmp(ep.d_name, "..")) {
-					ret = _app2sd_delete_directory(abs_filename);
-					if (ret <0) {
-						(void)closedir(dp);
-						return -1;
-					}
-				}
-			} else {
-				ret = remove(abs_filename);
-				if (ret <0) {
-					(void)closedir(dp);
-					return -1;
-				}
-			}
-		}
-		(void)closedir(dp);
-		ret = remove(dirname);
-		if (ret <0)
-			return -1;
-	} else {
-		_W("couldn't open the directory[%s]", dirname);
-	}
-	return 0;
-}
-
 void _app2sd_delete_symlink(const char *dirname)
 {
 	int ret = 0;
@@ -203,18 +154,16 @@ void _app2sd_delete_symlink(const char *dirname)
 			/*get realpath find symlink to ".mmc" and unlink it*/
 			snprintf(abs_filename, FILENAME_MAX, "%s/%s", dirname, ep.d_name);
 			char *path = realpath(abs_filename, mmc_path);
-			if(!path){
+			if (!path)
 				_E("realpath failed");
-			}
 
-			if (strstr(mmc_path,".mmc")) {
+			if (strstr(mmc_path, ".mmc")) {
 				_E("force unlink [%s]", abs_filename);
 				if (unlink(abs_filename)) {
-					if (errno == ENOENT) {
+					if (errno == ENOENT)
 						_E("Unable to access file %s", abs_filename);
-					} else {
+					else
 						_E("Unable to delete %s", abs_filename);
-					}
 				}
 			}
 
@@ -224,9 +173,8 @@ void _app2sd_delete_symlink(const char *dirname)
 		/*delete ".mmc" folder*/
 		snprintf(abs_filename, FILENAME_MAX, "%s/.mmc", dirname);
 		ret = remove(abs_filename);
-		if (ret == -1) {
+		if (ret == -1)
 			return;
-		}
 	} else {
 		_E("couldn't open the directory[%s]", dirname);
 	}
@@ -314,14 +262,14 @@ char *_app2sd_encrypt_device(const char *device,
 	const char *loopback_device, char *passwd)
 {
 	/* TODO : change to dm-crypt */
-	const char *argv[] =
-	    { "/sbin/losetup", device, loopback_device, NULL };
+	const char *argv[] = { "/sbin/losetup", device,
+		loopback_device, NULL };
 	pid_t pid = 0;
 	int my_pipe[2] = { 0, };
 	char buf[FILENAME_MAX] = { 0, };
 	char *ret_result = NULL;
 	int result = 0;
-	char err_buf[1024] = {0,};
+	char err_buf[1024] = { 0,};
 
 	if (pipe(my_pipe) < 0) {
 		fprintf(stderr, "Unable to create pipe\n");
@@ -515,11 +463,10 @@ char *_app2sd_find_associated_device(const char *loopback_device)
 	while (line) {
 		if (strstr(line, loopback_device) != NULL) {
 			_D("found: (%s)", line);
-			if (ret_result) {
+			if (ret_result)
 				_D("duplicated device");
-			} else {
+			else
 				ret_result = strdup(line);
-			}
 		}
 		line = strtok_r(NULL, "\n", &save_str);
 	}
@@ -594,7 +541,7 @@ char *_app2sd_find_free_device(void)
 	return ret_result;
 }
 
-/*@_app2sd_generate_password
+/*
 * This is a simple password generator
 * return: On success, it will return the password, else NULL.
 */
@@ -612,8 +559,8 @@ char *_app2sd_generate_password(const char *pkgid)
 	int j = appname_len;
 	unsigned int seed;
 
-	/* Length of the password */
-	ret_result = (char*)malloc(PASSWD_LEN + 1);
+	/* length of the password */
+	ret_result = (char *)malloc(PASSWD_LEN + 1);
 	if (NULL == ret_result) {
 		_E("unable to allocate memory");
 		return NULL;
