@@ -36,10 +36,9 @@
 /*sqlite  db code*/
 #define APP2SD_DB_FILE tzplatform_mkpath(TZ_SYS_DB, ".app2sd.db")
 sqlite3 *app2sd_db;
-#define QUERY_CREATE_TABLE_APP2SD "create table app2sd \
-	(pkgid text primary key,\
-	 password text\
-	)"
+#define QUERY_CREATE_TABLE_APP2SD "CREATE TABLE IF NOT EXISTS app2sd_info " \
+	"(pkgid TEXT PRIMARY KEY NOT NULL, password TEXT NOT NULL, " \
+	"filename TEXT NOT NULL, uid INTEGER)"
 
 int _app2sd_initialize_db()
 {
@@ -82,13 +81,15 @@ int _app2sd_initialize_db()
 	return 0;
 }
 
-int _app2sd_set_password_in_db(const char *pkgid, const char *passwd)
+int _app2sd_set_password_in_db(const char *pkgid, const char *passwd,
+		const char *loopback_device, uid_t uid)
 {
 	char *error_message = NULL;
 	char *query = NULL;
 
-	query = sqlite3_mprintf("insert into app2sd" \
-		"(pkgid, password) values (%Q, %Q)", pkgid, passwd);
+	query = sqlite3_mprintf("insert into app2sd_info " \
+		"(pkgid, password, filename, uid) values (%Q, %Q, %Q, %d)",
+		pkgid, passwd, loopback_device, uid);
 
 	if (SQLITE_OK != sqlite3_exec(app2sd_db, query, NULL, NULL,
 		&error_message)) {
@@ -102,13 +103,13 @@ int _app2sd_set_password_in_db(const char *pkgid, const char *passwd)
 	return APP2EXT_SUCCESS;
 }
 
-int _app2sd_remove_password_from_db(const char *pkgid)
+int _app2sd_remove_password_from_db(const char *pkgid, uid_t uid)
 {
 	char *error_message = NULL;
 	char *query = NULL;
 
-	query = sqlite3_mprintf("delete from app2sd" \
-		" where pkgid=%Q", pkgid);
+	query = sqlite3_mprintf("delete from app2sd_info " \
+		"where pkgid=%Q and uid=%d", pkgid, uid);
 
 	if (SQLITE_OK != sqlite3_exec(app2sd_db, query, NULL,
 		NULL, &error_message)) {
@@ -123,7 +124,7 @@ int _app2sd_remove_password_from_db(const char *pkgid)
 	return APP2EXT_SUCCESS;
 }
 
-char *_app2sd_get_password_from_db(const char *pkgid)
+char *_app2sd_get_password_from_db(const char *pkgid, uid_t uid)
 {
 	char *query = NULL;
 	char *passwd = NULL;
@@ -131,8 +132,8 @@ char *_app2sd_get_password_from_db(const char *pkgid)
 	sqlite3_stmt *stmt = NULL;
 	int rc = 0;
 
-	query = sqlite3_mprintf("select * from app2sd" \
-		" where pkgid=%Q", pkgid);
+	query = sqlite3_mprintf("select * from app2sd_info " \
+		"where pkgid=%Q and uid=%d", pkgid, uid);
 
 	if (SQLITE_OK != sqlite3_prepare(app2sd_db, query,
 		strlen(query), &stmt, &tail)) {
