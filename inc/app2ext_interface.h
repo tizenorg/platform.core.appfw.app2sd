@@ -432,8 +432,8 @@ API int app2ext_usr_force_clean_pkg(const char *pkgid, uid_t uid);
  * @brief : This API mount/unmount all entries which are located in external memory
  * @return      error < 0 if fail to start enable/disable
  */
-API int app2ext_enable_external_full_pkg(void);
-API int app2ext_disable_external_full_pkg(void);
+API int app2ext_enable_all_external_pkgs(void);
+API int app2ext_disable_all_external_pkgs(void);
 
 #ifdef __cplusplus
 }

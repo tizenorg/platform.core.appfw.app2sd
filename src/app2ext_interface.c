@@ -280,7 +280,7 @@ int app2ext_disable_external_pkg(const char *pkgid)
 	return ret;
 }
 
-int app2ext_enable_external_full_pkg(void)
+int app2ext_enable_all_external_pkgs(void)
 {
 	int ret = 0;
 	app2ext_handle *handle = NULL;
@@ -303,7 +303,7 @@ int app2ext_enable_external_full_pkg(void)
 	return 0;
 }
 
-int app2ext_disable_external_full_pkg(void)
+int app2ext_disable_all_external_pkgs(void)
 {
 	int ret = 0;
 	app2ext_handle *handle = NULL;
