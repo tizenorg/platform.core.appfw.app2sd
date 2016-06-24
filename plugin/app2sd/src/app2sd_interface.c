@@ -1044,6 +1044,7 @@ int app2sd_enable_full_pkg(void)
 	ret = _app2sd_initialize_db();
 	if (ret) {
 		_E("app2sd db initialize failed");
+		closedir(dir);
 		return APP2EXT_ERROR_SQLITE_REGISTRY;
 	}
 
@@ -1106,6 +1107,7 @@ int app2sd_disable_full_pkg(void)
 	ret = _app2sd_initialize_db();
 	if (ret) {
 		_E("app2sd db initialize failed");
+		closedir(dir);
 		return APP2EXT_ERROR_SQLITE_REGISTRY;
 	}
 

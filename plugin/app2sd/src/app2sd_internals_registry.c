@@ -90,6 +90,10 @@ static int _app2sd_check_existing_info(const char *pkgid, uid_t uid)
 
 	query = sqlite3_mprintf("select count(*) from app2sd_info " \
 		"where pkgid=%Q and uid=%d", pkgid, uid);
+	if (query == NULL) {
+		_E("failed to make a query");
+		return -1;
+	}
 
 	ret = sqlite3_prepare_v2(app2sd_db, query, strlen(query), &stmt, NULL);
 	if (ret != SQLITE_OK) {
@@ -175,6 +179,10 @@ int _app2sd_get_info_from_db(const char *filename, char **pkgid, uid_t *uid)
 	_D("filename(%s)", filename);
 	query = sqlite3_mprintf("select * from app2sd_info " \
 		"where filename=%Q", filename);
+	if (query == NULL) {
+		_E("failed to make a query");
+		return APP2EXT_ERROR_SQLITE_REGISTRY;
+	}
 
 	ret = sqlite3_prepare_v2(app2sd_db, query, strlen(query), &stmt, NULL);
 	if (ret != SQLITE_OK) {
@@ -237,6 +245,10 @@ char *_app2sd_get_password_from_db(const char *pkgid, uid_t uid)
 
 	query = sqlite3_mprintf("select * from app2sd_info " \
 		"where pkgid=%Q and uid=%d", pkgid, uid);
+	if (query == NULL) {
+		_E("failed to make a query");
+		return NULL;
+	}
 
 	ret = sqlite3_prepare_v2(app2sd_db, query, strlen(query), &stmt, NULL);
 	if (ret != SQLITE_OK) {

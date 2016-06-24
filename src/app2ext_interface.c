@@ -239,7 +239,7 @@ int app2ext_usr_disable_external_pkg(const char *pkgid, uid_t uid)
 	char *encoded_id = NULL;
 
 	/* validate the function parameter received */
-	if (pkgid == NULL || uid < 0) {
+	if (pkgid == NULL) {
 		_E("invalid func parameters");
 		return -1;
 	}
@@ -331,7 +331,7 @@ int app2ext_usr_force_clean_pkg(const char *pkgid, uid_t uid)
 	app2ext_handle *handle = NULL;
 
 	/* validate the function parameter received */
-	if (pkgid == NULL || uid < 0) {
+	if (pkgid == NULL) {
 		_E("invalid func parameters");
 		return -1;
 	}

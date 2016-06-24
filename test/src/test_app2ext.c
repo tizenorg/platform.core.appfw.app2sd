@@ -234,12 +234,16 @@ FINISH_OFF:
 
 static int get_unzip_size(const char *item, unsigned long long *size)
 {
+	int ret = 0;
+	unzFile uzf = NULL;
+	char *filename = NULL;
+	unz_file_info fileInfo = { 0 };
+
 	if (!item || !size) {
 		printf("get size : invalid argument\n");
 		return -1;
 	}
-	int ret = 0;
-	unzFile uzf = unzOpen64(item);
+	uzf = unzOpen64(item);
 	if (uzf == NULL) {
 		printf("get size : failed to open item : [%s]\n", item);
 		*size = 0;
@@ -261,14 +265,15 @@ static int get_unzip_size(const char *item, unsigned long long *size)
 					return -1;
 				}
 
-				unz_file_info fileInfo = { 0 };
-				char *filename = (char *)calloc(1, 4096);
+				filename = (char *)calloc(1, 4096);
 				ret = unzGetCurrentFileInfo(uzf, &fileInfo, filename, (4096 - 1), NULL, 0, NULL, 0);
 				*size = (unsigned long long)fileInfo.uncompressed_size + *size;
 				if (ret != UNZ_OK) {
 					printf("get size : error get current file info\n");
 					unzCloseCurrentFile(uzf);
 					*size = 0;
+					free(filename);
+					filename = NULL;
 					break;
 				}
 
@@ -460,7 +465,7 @@ static int app_move()
 		ret = handle->interface.client_move(TEST_PKGNAME,
 			dir_list, APP2EXT_MOVE_TO_PHONE);
 		print_error_code(__func__, ret);
-		ret = app2ext_usr_get_app_location(TEST_PKGNAME, getuid());
+		ret_check = app2ext_usr_get_app_location(TEST_PKGNAME, getuid());
 		if (ret_check == APP2EXT_INTERNAL_MEM)
 			printf("pkg %s is moved to internal memory\n", TEST_PKGNAME);
 	} else if (ret == APP2EXT_INTERNAL_MEM) {
@@ -469,7 +474,7 @@ static int app_move()
 		ret = handle->interface.client_move(TEST_PKGNAME,
 			dir_list, APP2EXT_MOVE_TO_EXT);
 		print_error_code(__func__, ret);
-		ret = app2ext_usr_get_app_location(TEST_PKGNAME, getuid());
+		ret_check = app2ext_usr_get_app_location(TEST_PKGNAME, getuid());
 		if (ret_check == APP2EXT_SD_CARD)
 			printf("pkg %s is moved to sd card\n", TEST_PKGNAME);
 	}  else {
