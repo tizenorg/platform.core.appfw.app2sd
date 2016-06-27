@@ -774,6 +774,12 @@ int app2sd_usr_move_installed_app(const char *pkgid, GList *dir_list,
 	}
 	pkgmgrinfo_pkginfo_destroy_pkginfo(info_handle);
 
+	ret = __app2sd_create_app2sd_directories(uid);
+	if (ret) {
+		_E("failed to create app2sd dirs");
+		return ret;
+	}
+
 	ret = _app2sd_usr_move_app(pkgid, move_type, dir_list, uid);
 	if (ret) {
 		_D("unable to move application");
