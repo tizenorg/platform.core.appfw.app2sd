@@ -28,7 +28,7 @@
 
 #include "app2sd_internals.h"
 
-#ifdef _APPFW_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
+#ifdef TIZEN_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
 #define DMCRYPT_ITER_TIME	50
 #define DMCRYPT_KEY_LEN		128
 #endif
@@ -355,7 +355,7 @@ int _app2sd_remove_all_loopback_encryption_setups(const char *loopback_device)
 	return ret;
 }
 
-#ifdef _APPFW_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
+#ifdef TIZEN_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
 int _app2sd_dmcrypt_setup_device(const char *pkgid,
 		const char *loopback_device, bool is_dup, uid_t uid)
 {
@@ -861,7 +861,7 @@ int _app2sd_move_app_to_external(const char *pkgid, GList *dir_list, uid_t uid)
 	int reqd_size = 0;
 	int reqd_disk_size = 0;
 	char *device_node = NULL;
-#if !defined(_APPFW_FEATURE_APP2SD_DMCRYPT_ENCRYPTION)
+#if !defined(TIZEN_FEATURE_APP2SD_DMCRYPT_ENCRYPTION)
 	char *devi = NULL;
 #endif
 	int free_mmc_mem = 0;
@@ -960,7 +960,7 @@ int _app2sd_move_app_to_external(const char *pkgid, GList *dir_list, uid_t uid)
 		return ret;
 	}
 
-#ifdef _APPFW_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
+#ifdef TIZEN_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
 	ret = _app2sd_dmcrypt_setup_device(pkgid, loopback_device, false, uid);
 	if (ret) {
 		_E("dmcrypt setup device error(%d)", ret);
@@ -1089,7 +1089,7 @@ int _app2sd_move_app_to_external(const char *pkgid, GList *dir_list, uid_t uid)
 	if (ret)
 		_E("unmount error (%d)", ret);
 
-#ifdef _APPFW_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
+#ifdef TIZEN_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
 	ret = _app2sd_dmcrypt_close_device(pkgid, uid);
 	if (ret)
 		_E("close dmcrypt device error(%d)", ret);
@@ -1206,7 +1206,7 @@ int _app2sd_move_app_to_internal(const char *pkgid, GList *dir_list, uid_t uid)
 		return APP2EXT_ERROR_MMC_INSUFFICIENT_MEMORY;
 	}
 
-#ifdef _APPFW_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
+#ifdef TIZEN_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
 	device_node =
 		_app2sd_find_associated_dmcrypt_device_node(pkgid, uid);
 #else
@@ -1214,7 +1214,7 @@ int _app2sd_move_app_to_internal(const char *pkgid, GList *dir_list, uid_t uid)
 #endif
 	if (NULL == device_node) {
 		/* do loopback setup */
-#ifdef _APPFW_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
+#ifdef TIZEN_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
 		ret = _app2sd_dmcrypt_open_device(pkgid, loopback_device,
 			false, uid, &device_node);
 		if (ret) {
@@ -1343,7 +1343,7 @@ int _app2sd_move_app_to_internal(const char *pkgid, GList *dir_list, uid_t uid)
 		_E("unable to unmount SD directory for app (%s)",
 		     pkgid);
 
-#ifdef _APPFW_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
+#ifdef TIZEN_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
 	ret = _app2sd_dmcrypt_close_device(pkgid, uid);
 	if (ret)
 		_E("close dmcrypt device error(%d)", ret);
@@ -1465,7 +1465,7 @@ int _app2sd_duplicate_device(const char *pkgid,
 {
 	int ret = 0;
 	int err_res = 0;
-#if !defined(_APPFW_FEATURE_APP2SD_DMCRYPT_ENCRYPTION)
+#if !defined(TIZEN_FEATURE_APP2SD_DMCRYPT_ENCRYPTION)
 	char *devi = NULL;
 	char *result = NULL;
 	char *passwd = NULL;
@@ -1480,7 +1480,7 @@ int _app2sd_duplicate_device(const char *pkgid,
 	}
 
 	/* perform loopback encryption setup */
-#ifdef _APPFW_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
+#ifdef TIZEN_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
 	dev_node = _app2sd_dmcrypt_duplicate_encryption_setup(pkgid,
 		temp_loopback_device, uid);
 	if (!dev_node) {
@@ -1556,7 +1556,7 @@ int _app2sd_duplicate_device(const char *pkgid,
 		goto FINISH_OFF;
 	}
 
-#if !defined(_APPFW_FEATURE_APP2SD_DMCRYPT_ENCRYPTION)
+#if !defined(TIZEN_FEATURE_APP2SD_DMCRYPT_ENCRYPTION)
 	if (devi) {
 		free(devi);
 		devi = NULL;
@@ -1567,7 +1567,7 @@ int _app2sd_duplicate_device(const char *pkgid,
 
 FINISH_OFF:
 	if (dev_node) {
-#ifdef _APPFW_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
+#ifdef TIZEN_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
 		ret = _app2sd_dmcrypt_close_device(temp_pkgid, uid);
 		if (ret)
 			_E("close dmcrypt device error(%d)", ret);
@@ -1611,7 +1611,7 @@ int _app2sd_update_loopback_device_size(const char *pkgid,
 	}
 
 	/* get the associated device node for SD card applicatione */
-#ifdef _APPFW_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
+#ifdef TIZEN_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
 	old_device_node =
 		_app2sd_find_associated_dmcrypt_device_node(pkgid, uid);
 #else
@@ -1619,7 +1619,7 @@ int _app2sd_update_loopback_device_size(const char *pkgid,
 #endif
 	if (NULL == old_device_node) {
 		/* do loopback setup */
-#ifdef _APPFW_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
+#ifdef TIZEN_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
 		ret = _app2sd_dmcrypt_open_device(pkgid, loopback_device,
 			false, uid, &old_device_node);
 		if (ret) {
@@ -1680,7 +1680,7 @@ int _app2sd_update_loopback_device_size(const char *pkgid,
 		goto FINISH_OFF;
 	}
 
-#ifdef _APPFW_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
+#ifdef TIZEN_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
 	ret = _app2sd_dmcrypt_close_device(pkgid, uid);
 	if (ret) {
 		_E("close dmcrypt device error(%d)", ret);
@@ -1738,7 +1738,7 @@ FINISH_OFF:
 		old_device_node = NULL;
 	}
 
-#ifdef _APPFW_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
+#ifdef TIZEN_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
 	ret = _app2sd_dmcrypt_close_device(pkgid, uid);
 	if (ret)
 		_E("close dmcrypt device error(%d)", ret);
@@ -1777,7 +1777,7 @@ int _app2sd_force_clean(const char *pkgid, const char *application_path,
 		_E("unable to unmount the app content (%d)", ret);
 
 	/* detach the loopback encryption setup for the application */
-#ifdef _APPFW_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
+#ifdef TIZEN_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
 	ret = _app2sd_dmcrypt_close_device(pkgid, uid);
 	if (ret)
 		_E("close dmcrypt device error (%d)", ret);

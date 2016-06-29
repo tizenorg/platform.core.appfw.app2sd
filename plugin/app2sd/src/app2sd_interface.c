@@ -47,7 +47,7 @@ int app2sd_usr_pre_app_install(const char *pkgid, GList *dir_list, int size, uid
 	int ret = 0;
 	int free_mmc_mem = 0;
 	char *device_node = NULL;
-#if !defined(_APPFW_FEATURE_APP2SD_DMCRYPT_ENCRYPTION)
+#if !defined(TIZEN_FEATURE_APP2SD_DMCRYPT_ENCRYPTION)
 	char *devi = NULL;
 #endif
 	char *result = NULL;
@@ -125,7 +125,7 @@ int app2sd_usr_pre_app_install(const char *pkgid, GList *dir_list, int size, uid
 	ret = _app2sd_create_loopback_device(pkgid, loopback_device,
 		(reqd_disk_size + PKG_BUF_SIZE));
 
-#ifdef _APPFW_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
+#ifdef TIZEN_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
 	ret = _app2sd_dmcrypt_setup_device(pkgid, loopback_device, false, uid);
 	if (ret) {
 		_E("dmcrypt setup device error");
@@ -185,7 +185,7 @@ int app2sd_usr_pre_app_install(const char *pkgid, GList *dir_list, int size, uid
 
 FINISH_OFF:
 	if (device_node) {
-#ifdef _APPFW_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
+#ifdef TIZEN_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
 	ret = _app2sd_dmcrypt_close_device(pkgid, uid);
 	if (ret)
 		_E("close dmcrypt device error(%d)", ret);
@@ -206,7 +206,7 @@ END:
 		device_node = NULL;
 	}
 
-#if !defined(_APPFW_FEATURE_APP2SD_DMCRYPT_ENCRYPTION)
+#if !defined(TIZEN_FEATURE_APP2SD_DMCRYPT_ENCRYPTION)
 	if (devi) {
 		free(devi);
 		devi = NULL;
@@ -261,7 +261,7 @@ int app2sd_usr_post_app_install(const char *pkgid,
 	free(encoded_id);
 
 	/* get the associated device node for SD card applicationer */
-#ifdef _APPFW_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
+#ifdef TIZEN_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
 	device_name =
 		_app2sd_find_associated_dmcrypt_device_node(pkgid, uid);
 	if (!device_name)
@@ -282,7 +282,7 @@ int app2sd_usr_post_app_install(const char *pkgid,
 		return APP2EXT_ERROR_UNMOUNT;
 	}
 
-#ifdef _APPFW_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
+#ifdef TIZEN_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
 	ret = _app2sd_dmcrypt_close_device(pkgid, uid);
 	if (ret) {
 		if (device_name) {
@@ -351,7 +351,7 @@ int app2sd_usr_on_demand_setup_init(const char *pkgid, uid_t uid)
 	char loopback_device[FILENAME_MAX] = { 0, };
 	char *encoded_id = NULL;
 	char *device_node = NULL;
-#if !defined(_APPFW_FEATURE_APP2SD_DMCRYPT_ENCRYPTION)
+#if !defined(TIZEN_FEATURE_APP2SD_DMCRYPT_ENCRYPTION)
 	char *result = NULL;
 #endif
 	FILE *fp = NULL;
@@ -396,7 +396,7 @@ int app2sd_usr_on_demand_setup_init(const char *pkgid, uid_t uid)
 	}
 	fclose(fp);
 
-#ifdef _APPFW_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
+#ifdef TIZEN_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
 	device_node =
 		_app2sd_find_associated_dmcrypt_device_node(pkgid, uid);
 	if (device_node) {
@@ -503,7 +503,7 @@ int app2sd_usr_on_demand_setup_exit(const char *pkgid, uid_t uid)
 		return APP2EXT_ERROR_UNMOUNT;
 	}
 
-#ifdef _APPFW_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
+#ifdef TIZEN_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
 	ret = _app2sd_dmcrypt_close_device(pkgid, uid);
 	if (ret)
 		_E("close dmcrypt device error(%d)", ret);
@@ -571,7 +571,7 @@ int app2sd_usr_pre_app_uninstall(const char *pkgid, uid_t uid)
 	fclose(fp);
 
 	/* get the associated device node for SD card applicationer */
-#ifdef _APPFW_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
+#ifdef TIZEN_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
 	device_node =
 		_app2sd_find_associated_dmcrypt_device_node(pkgid, uid);
 #else
@@ -579,7 +579,7 @@ int app2sd_usr_pre_app_uninstall(const char *pkgid, uid_t uid)
 #endif
 	if (NULL == device_node) {
 		/* do loopback setup */
-#ifdef _APPFW_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
+#ifdef TIZEN_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
 		ret = _app2sd_dmcrypt_open_device(pkgid, loopback_device,
 			false, uid, &device_node);
 		if (ret) {
@@ -683,7 +683,7 @@ int app2sd_usr_post_app_uninstall(const char *pkgid, uid_t uid)
 		goto END;
 	}
 	/* detach the loopback encryption setup for the application */
-#ifdef _APPFW_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
+#ifdef TIZEN_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
 	ret = _app2sd_dmcrypt_close_device(pkgid, uid);
 	if (ret) {
 		_E("close dmcrypt device error(%d)", ret);
@@ -960,7 +960,7 @@ int app2sd_usr_pre_app_upgrade(const char *pkgid, GList *dir_list,
 	}
 
 	/* get the associated device node for SD card applicationer */
-#ifdef _APPFW_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
+#ifdef TIZEN_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
 	device_node =
 		_app2sd_find_associated_dmcrypt_device_node(pkgid, uid);
 #else
@@ -968,7 +968,7 @@ int app2sd_usr_pre_app_upgrade(const char *pkgid, GList *dir_list,
 #endif
 	if (NULL == device_node) {
 		/* do loopback setup */
-#ifdef _APPFW_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
+#ifdef TIZEN_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
 		ret = _app2sd_dmcrypt_open_device(pkgid, loopback_device,
 			false, uid, &device_node);
 		if (ret) {
@@ -1061,7 +1061,7 @@ int app2sd_usr_post_app_upgrade(const char *pkgid,
 	free(encoded_id);
 
 	/* get the associated device node for SD card applicationer */
-#ifdef _APPFW_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
+#ifdef TIZEN_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
 	device_name =
 		_app2sd_find_associated_dmcrypt_device_node(pkgid, uid);
 	if (!device_name) {
@@ -1085,7 +1085,7 @@ int app2sd_usr_post_app_upgrade(const char *pkgid,
 		return APP2EXT_ERROR_UNMOUNT;
 	}
 
-#ifdef _APPFW_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
+#ifdef TIZEN_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
 	ret = _app2sd_dmcrypt_close_device(pkgid, uid);
 	if (ret) {
 		if (device_name) {
