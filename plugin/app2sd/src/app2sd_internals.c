@@ -397,15 +397,15 @@ int _app2sd_dmcrypt_setup_device(const char *pkgid,
 		}
 	}
 
-	snprintf(dmcrypt_setup_cmd, BUF_SIZE, "echo '%s' | cryptsetup -q -i %d " \
+	snprintf(dmcrypt_setup_cmd, BUF_SIZE, "/bin/echo '%s' | /sbin/cryptsetup -q -i %d " \
 		"-c aes-cbc-lmk -s %d --align-payload=8 luksFormat %s",
 		passwd, DMCRYPT_ITER_TIME, DMCRYPT_KEY_LEN, loopback_device);
 
 	ret = system(dmcrypt_setup_cmd);
 	if (ret) {
-		if (strerror_r(errno, err_buf, sizeof(err_buf)))
-			_E("Error setting up dmcrypt on app2sd file, " \
-				"error(%s), ret(%d)", err_buf, ret);
+		strerror_r(errno, err_buf, sizeof(err_buf));
+		_E("Error setting up dmcrypt on app2sd file, " \
+			"error(%s), ret(%d)", err_buf, ret);
 		if (passwd) {
 			free(passwd);
 			passwd = NULL;
@@ -452,13 +452,13 @@ int _app2sd_dmcrypt_open_device(const char *pkgid, const char *loopback_device,
 		return APP2EXT_ERROR_SQLITE_REGISTRY;
 	}
 
-	snprintf(dmcrypt_open_cmd, BUF_SIZE, "echo '%s' | cryptsetup -q luksOpen %s %s",
+	snprintf(dmcrypt_open_cmd, BUF_SIZE, "/bin/echo '%s' | /sbin/cryptsetup -q luksOpen %s %s",
 		passwd, loopback_device, dev_name);
 
 	ret = system(dmcrypt_open_cmd);
 	if (ret) {
-		if (strerror_r(errno, buf, sizeof(buf)))
-			_E("error opening dmcrypt device, error: [%s]", buf);
+		strerror_r(errno, buf, sizeof(buf));
+		_E("error opening dmcrypt device, error: [%s]", buf);
 		return APP2EXT_ERROR_OPEN_DMCRYPT_DEVICE;
 	}
 
@@ -497,12 +497,12 @@ int _app2sd_dmcrypt_close_device(const char *pkgid, uid_t uid)
 	t_dev_node = NULL;
 
 	snprintf(dev_node, BUF_SIZE, "/dev/mapper/%s_%d", pkgid, uid);
-	snprintf(dmcrypt_close_cmd, BUF_SIZE, "cryptsetup -q luksClose %s", dev_node);
+	snprintf(dmcrypt_close_cmd, BUF_SIZE, "/sbin/cryptsetup -q luksClose %s", dev_node);
 	ret = system(dmcrypt_close_cmd);
 	if (ret) {
-		if (strerror_r(errno, err_buf, sizeof(err_buf)))
-			_E("error closing dmcrypt on app2sd file,"\
-				" error: [%s]", err_buf);
+		strerror_r(errno, err_buf, sizeof(err_buf));
+		_E("error closing dmcrypt on app2sd file,"\
+			" error: [%s]", err_buf);
 		return APP2EXT_ERROR_CLOSE_DMCRYPT_DEVICE;
 	}
 
@@ -578,7 +578,7 @@ int _app2sd_create_loopback_device(const char *pkgid,
 	snprintf(command, FILENAME_MAX - 1, "of=%s", loopback_device);
 	snprintf(buff, BUF_SIZE - 1, "count=%d", size);
 
-	const char *argv1[] = { "dd", "if=/dev/zero",
+	const char *argv1[] = { "/bin/dd", "if=/dev/zero",
 		command, "bs=1M", buff, NULL };
 
 	if ((fp = fopen(loopback_device, "r+")) != NULL) {
@@ -590,7 +590,7 @@ int _app2sd_create_loopback_device(const char *pkgid,
 
 	ret = _xsystem(argv1);
 	if (ret)
-		_E("command (%s) failed", command);
+		_E("command (%s) failed, ret(%d), errno(%d)", command, ret, errno);
 
 	return ret;
 }
