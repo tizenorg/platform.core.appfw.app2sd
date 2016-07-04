@@ -279,9 +279,13 @@ typedef int (*app2ext_client_post_uninstall)(const char *appname);
  *                              [Enum: APP2EXT_MOVE_TO_EXT, APP2EXT_MOVE_TO_PHONE]
  * @return      0 if success, error code(>0) if fail
  */
-typedef int (*app2ext_client_usr_move)(const char *appname, GList* dir_list,
+typedef int (*app2ext_client_usr_pre_move)(const char *appname, GList* dir_list,
 		app2ext_move_type move_type, uid_t uid);
-typedef int (*app2ext_client_move)(const char *appname, GList* dir_list,
+typedef int (*app2ext_client_pre_move)(const char *appname, GList* dir_list,
+		app2ext_move_type move_type);
+typedef int (*app2ext_client_usr_post_move)(const char *appname,
+		app2ext_move_type move_type, uid_t uid);
+typedef int (*app2ext_client_post_move)(const char *appname,
 		app2ext_move_type move_type);
 
 /**
@@ -339,7 +343,8 @@ typedef struct app2ext_interface_t {
 	app2ext_client_disable			client_disable;
 	app2ext_client_enable_full_pkg		client_enable_full_pkg;
 	app2ext_client_disable_full_pkg		client_disable_full_pkg;
-	app2ext_client_move			client_move;
+	app2ext_client_pre_move			client_pre_move;
+	app2ext_client_post_move		client_post_move;
 
 	app2ext_client_usr_pre_install		client_usr_pre_install;
 	app2ext_client_usr_post_install		client_usr_post_install;
@@ -350,7 +355,8 @@ typedef struct app2ext_interface_t {
 	app2ext_client_usr_force_clean		client_usr_force_clean;
 	app2ext_client_usr_enable		client_usr_enable;
 	app2ext_client_usr_disable		client_usr_disable;
-	app2ext_client_usr_move			client_usr_move;
+	app2ext_client_usr_pre_move		client_usr_pre_move;
+	app2ext_client_usr_post_move		client_usr_post_move;
 } app2ext_interface;
 
 /**

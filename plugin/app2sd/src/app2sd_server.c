@@ -158,10 +158,16 @@ static const gchar introspection_xml[] =
 "			<arg type='i' name='uid' direction='in'/>"
 "			<arg type='i' name='result' direction='out'/>"
 "		</method>"
-"		<method name='MoveInstalledApp'>"
+"		<method name='PreMoveInstalledApp'>"
 "			<arg type='s' name='pkgid' direction='in'/>"
 "			<arg type='i' name='move_type' direction='in'/>"
 "			<arg type='a(si)' name='dir_list' direction='in'/>"
+"			<arg type='i' name='uid' direction='in'/>"
+"			<arg type='i' name='result' direction='out'/>"
+"		</method>"
+"		<method name='PostMoveInstalledApp'>"
+"			<arg type='s' name='pkgid' direction='in'/>"
+"			<arg type='i' name='move_type' direction='in'/>"
 "			<arg type='i' name='uid' direction='in'/>"
 "			<arg type='i' name='result' direction='out'/>"
 "		</method>"
@@ -507,8 +513,9 @@ static void _app2sd_server_ondemand_setup_exit(GDBusConnection *connection, cons
 	g_dbus_method_invocation_return_value(invocation, param);
 }
 
-static void _app2sd_server_move_installed_app(GDBusConnection *connection, const gchar *sender,
-	GVariant *parameters, GDBusMethodInvocation *invocation, uid_t sender_uid)
+static void _app2sd_server_pre_move_installed_app(GDBusConnection *connection,
+	const gchar *sender, GVariant *parameters,
+	GDBusMethodInvocation *invocation, uid_t sender_uid)
 {
 	GVariant *param = NULL;
 	int result = APP2EXT_SUCCESS;
@@ -563,9 +570,42 @@ static void _app2sd_server_move_installed_app(GDBusConnection *connection, const
 	g_variant_iter_free(iter);
 
 	dir_list = g_list_first(list);
-	ret = app2sd_usr_move_installed_app(pkgid, dir_list, move_type, target_uid);
+	ret = app2sd_usr_pre_move_installed_app(pkgid, dir_list, move_type, target_uid);
 	if (ret) {
-		_E("usr_move error(%d)", ret);
+		_E("pre_move error(%d)", ret);
+		result = ret;
+	}
+
+	param = g_variant_new("(i)", result);
+	g_dbus_method_invocation_return_value(invocation, param);
+}
+
+static void _app2sd_server_post_move_installed_app(GDBusConnection *connection,
+	const gchar *sender, GVariant *parameters,
+	GDBusMethodInvocation *invocation, uid_t sender_uid)
+{
+	GVariant *param = NULL;
+	int result = APP2EXT_SUCCESS;
+	int move_type;
+	char *pkgid = NULL;
+	int ret = 0;
+	uid_t target_uid = -1;
+
+	g_variant_get(parameters, "(&sii)", &pkgid, &move_type, &target_uid);
+
+	_D("pkgid(%s), move_type(%d),sender_uid(%d), target_uid(%d)",
+		pkgid, move_type, sender_uid, target_uid);
+
+	if (sender_uid != 0 && sender_uid != target_uid) {
+		_E("Not permitted user!");
+		_app2sd_server_return_method_error(invocation,
+			APP2EXT_ERROR_OPERATION_NOT_PERMITTED);
+		return;
+	}
+
+	ret = app2sd_usr_post_move_installed_app(pkgid, move_type, target_uid);
+	if (ret) {
+		_E("post_move error(%d)", ret);
 		result = ret;
 	}
 
@@ -690,8 +730,11 @@ static void handle_method_call(GDBusConnection *connection,
 	} else if (g_strcmp0(method_name, "OndemandSetupExit") == 0) {
 		_app2sd_server_ondemand_setup_exit(connection, sender,
 			parameters, invocation, sender_uid);
-	} else if (g_strcmp0(method_name, "MoveInstalledApp") == 0) {
-		_app2sd_server_move_installed_app(connection, sender,
+	} else if (g_strcmp0(method_name, "PreMoveInstalledApp") == 0) {
+		_app2sd_server_pre_move_installed_app(connection, sender,
+			parameters, invocation, sender_uid);
+	} else if (g_strcmp0(method_name, "PostMoveInstalledApp") == 0) {
+		_app2sd_server_post_move_installed_app(connection, sender,
 			parameters, invocation, sender_uid);
 	} else if (g_strcmp0(method_name, "ForceClean") == 0) {
 		_app2sd_server_force_clean(connection, sender,

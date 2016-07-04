@@ -496,7 +496,7 @@ int app2sd_client_on_demand_setup_exit(const char *pkgid)
 	return ret;
 }
 
-int app2sd_client_usr_move_installed_app(const char *pkgid, GList *dir_list,
+int app2sd_client_usr_pre_move_installed_app(const char *pkgid, GList *dir_list,
 		app2ext_move_type move_type, uid_t uid)
 {
 	int ret = 0;
@@ -515,28 +515,59 @@ int app2sd_client_usr_move_installed_app(const char *pkgid, GList *dir_list,
 	if (move_type == APP2EXT_MOVE_TO_EXT)
 		cmd = APP2SD_MOVE_APP_TO_MMC;
 
-	ret = __app2sd_create_default_directories(pkgid, cmd, uid);
-	if (ret)
-		return ret;
+	if (cmd == APP2SD_MOVE_APP_TO_MMC) {
+		ret = __app2sd_create_default_directories(pkgid, cmd, uid);
+		if (ret)
+			return ret;
+	}
 
 	builder = g_variant_builder_new(G_VARIANT_TYPE("a(si)"));
 	g_list_foreach(dir_list, __app2sd_create_dir_list_builder, builder);
 
 	param = g_variant_new("(sia(si)i)", pkgid, move_type, builder, uid);
-	ret = __app2sd_call_server_method("MoveInstalledApp", param);
+	ret = __app2sd_call_server_method("PreMoveInstalledApp", param);
 
 	if (builder)
 		g_variant_builder_unref(builder);
 
 	return ret;
 }
-int app2sd_client_move_installed_app(const char *pkgid, GList *dir_list,
+int app2sd_client_pre_move_installed_app(const char *pkgid, GList *dir_list,
 		app2ext_move_type move_type)
 {
 	int ret = 0;
 
-	ret = app2sd_client_usr_move_installed_app(pkgid,
+	ret = app2sd_client_usr_pre_move_installed_app(pkgid,
 		dir_list, move_type, getuid());
+
+	return ret;
+}
+
+int app2sd_client_usr_post_move_installed_app(const char *pkgid,
+		app2ext_move_type move_type, uid_t uid)
+{
+	int ret = 0;
+	GVariant *param = NULL;
+
+	/* validate the function parameter recieved */
+	if (pkgid == NULL || move_type < APP2EXT_MOVE_TO_EXT
+		|| move_type > APP2EXT_MOVE_TO_PHONE) {
+		_E("invalid function arguments");
+		return APP2EXT_ERROR_INVALID_ARGUMENTS;
+	}
+
+	param = g_variant_new("(sii)", pkgid, move_type, uid);
+	ret = __app2sd_call_server_method("PostMoveInstalledApp", param);
+
+	return ret;
+}
+int app2sd_client_post_move_installed_app(const char *pkgid,
+		app2ext_move_type move_type)
+{
+	int ret = 0;
+
+	ret = app2sd_client_usr_post_move_installed_app(pkgid,
+		move_type, getuid());
 
 	return ret;
 }
@@ -555,7 +586,8 @@ void app2ext_on_load(app2ext_interface *interface)
 	interface->client_disable = app2sd_client_on_demand_setup_exit;
 	interface->client_enable_full_pkg = app2sd_client_enable_full_pkg;
 	interface->client_disable_full_pkg = app2sd_client_disable_full_pkg;
-	interface->client_move = app2sd_client_move_installed_app;
+	interface->client_pre_move = app2sd_client_pre_move_installed_app;
+	interface->client_post_move = app2sd_client_post_move_installed_app;
 
 	interface->client_usr_pre_install = app2sd_client_usr_pre_app_install;
 	interface->client_usr_post_install = app2sd_client_usr_post_app_install;
@@ -566,5 +598,6 @@ void app2ext_on_load(app2ext_interface *interface)
 	interface->client_usr_force_clean = app2sd_client_usr_force_clean;
 	interface->client_usr_enable = app2sd_client_usr_on_demand_setup_init;
 	interface->client_usr_disable = app2sd_client_usr_on_demand_setup_exit;
-	interface->client_usr_move = app2sd_client_usr_move_installed_app;
+	interface->client_usr_pre_move = app2sd_client_usr_pre_move_installed_app;
+	interface->client_usr_post_move = app2sd_client_usr_post_move_installed_app;
 }

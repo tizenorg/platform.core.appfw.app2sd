@@ -47,8 +47,11 @@ int app2sd_usr_pre_app_uninstall(const char *pkgid, uid_t uid);
 
 int app2sd_usr_post_app_uninstall(const char *pkgid, uid_t uid);
 
-int app2sd_usr_move_installed_app(const char *pkgid,
+int app2sd_usr_pre_move_installed_app(const char *pkgid,
 		GList *dir_list, app2ext_move_type move_type, uid_t uid);
+
+int app2sd_usr_post_move_installed_app(const char *pkgid,
+		app2ext_move_type move_type, uid_t uid);
 
 int app2sd_usr_on_demand_setup_init(const char *pkgid, uid_t uid);
 

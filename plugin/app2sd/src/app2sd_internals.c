@@ -789,7 +789,8 @@ int _app2sd_mount_app_content(const char *application_path, const char *pkgid,
 		break;
 	}
 
-	if (cmd == APP2SD_PRE_UNINSTALL || cmd == APP2SD_PRE_UPGRADE) {
+	if (cmd == APP2SD_PRE_UNINSTALL || cmd == APP2SD_MOVE_APP_TO_PHONE ||
+		cmd == APP2SD_PRE_UPGRADE) {
 		/* delete lost+found dir */
 		snprintf(temp_path, FILENAME_MAX - 1, "%s/lost+found",
 			application_mmc_path);
@@ -1081,24 +1082,6 @@ int _app2sd_move_app_to_external(const char *pkgid, GList *dir_list, uid_t uid)
 		ret = APP2EXT_ERROR_DELETE_DIRECTORY;
 		goto ERR;
 	}
-
-	/* re-mount the loopback encrypted pseudo device on application installation path
-	 * as with Read Only permission
-	 */
-	ret = _app2sd_unmount_app_content(application_path);
-	if (ret)
-		_E("unmount error (%d)", ret);
-
-#ifdef TIZEN_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
-	ret = _app2sd_dmcrypt_close_device(pkgid, uid);
-	if (ret)
-		_E("close dmcrypt device error(%d)", ret);
-#else
-	ret = _app2sd_remove_loopback_encryption_setup(loopback_device);
-	if (ret)
-		_E("unable to detach loopback setup for (%s)",
-			loopback_device);
-#endif
 
 	sync();
 	return APP2EXT_SUCCESS;

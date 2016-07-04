@@ -59,7 +59,6 @@ extern "C" {
  * @post	Installation is done by package installer.
  *		Encryption password is saved in db TZ_SYS_DB/.app2sd.db
  * @param[in] appname		application package name
- *				[Ex: com.samsung.calculator]
  *This entry is parsed from application package control/manifest file.
  * @param[in] dir_list		directory structure of the application
  * @param[in] size	size of memory required by application(in MB).
@@ -76,7 +75,6 @@ int app2sd_client_pre_app_install(const char *pkgid,
  * @brief : This API does post installation operations after
  *		the installation in SD card
  * @param[in] appname		application package name
- *				[Ex: com.samsung.calculator]
  * @param[in] install_status	Status of installation of package
  *[ enum app2ext_status].If package installation failed then
  * install_status= APP2EXT_STATUS_FAILURE else if installation
@@ -96,7 +94,6 @@ int app2sd_client_post_app_install(const char *pkgid,
  * @pre			vfat type sd card must be present.
  * @post		Upgradation is done by package installer.
  * @param[in] appname		application package name
- *				[Ex: com.samsung.calculator]
  * @param[in] dir_list		directory structure of the application
  * @param[in] size	size of memory required by application(in MB).
  *This entry is parsed from application package control/manifest file.
@@ -112,7 +109,6 @@ int app2sd_client_pre_app_upgrade(const char *pkgid,
  * @brief : This API does post upgradation operations after
  *		the installation in SD card
  * @param[in] appname		application package name
- *				[Ex: com.samsung.calculator]
  * @param[in] install_status	Status of installation of package
  *[ enum app2extl_status].If package upgradation failed then
  * upgrade_status= APP2EXT_STATUS_FAILURE else if upgradation
@@ -130,7 +126,6 @@ int app2sd_client_post_app_upgrade(const char *pkgid,
  * @pre			Package must be installed in sdcard.
  * @post	Package is uninstalled by the package installer.
  * @param[in] appname		application package name
- *				[Ex: com.samsung.calculator]
  * @return	0 if success,  error code(>0) if fail
  * @remark	None.
  */
@@ -143,7 +138,6 @@ int app2sd_client_pre_app_uninstall(const char *pkgid);
  * @pre			Package must be uninstalled .
  * @post		Encryption password is removed from sqlite db.
  * @param[in] appname		application package name
- *				[Ex: com.samsung.calculator]
  * @return	0 if success,  error code(>0) if fail
  * @remark	None.
  */
@@ -151,10 +145,9 @@ int app2sd_client_usr_post_app_uninstall(const char *pkgid, uid_t uid);
 int app2sd_client_post_app_uninstall(const char *pkgid);
 
 /**
- * @brief : This API moves the package from sd card
+ * @brief : This API prepare the move of the package from sd card
  to internal memory and vice versa.
  * @param[in] pkgid		application package id
- *				[Ex: com.samsung.calculator]
  * @param[in] move_type		Move type[enum app2ext_move_type]
  *			[sd card to internal/internal to sd card]
  * @param[in] dir_list		directory structure of the application
@@ -164,16 +157,28 @@ int app2sd_client_post_app_uninstall(const char *pkgid);
  * @return	0 if success,  error code(>0) if fail
  * @remark	None.
  */
-int app2sd_client_usr_move_installed_app(const char *pkgid,
+int app2sd_client_usr_pre_move_installed_app(const char *pkgid,
 		GList *dir_list, app2ext_move_type move_type, uid_t uid);
-int app2sd_client_move_installed_app(const char *pkgid,
+int app2sd_client_pre_move_installed_app(const char *pkgid,
 		GList *dir_list, app2ext_move_type move_type);
+
+/**
+ * @brief : This API remove the resources created during the move.
+ * @param[in] pkgid		application package id
+ * @param[in] move_type		Move type[enum app2ext_move_type]
+ *			[sd card to internal/internal to sd card]
+ * @return	0 if success,  error code(>0) if fail
+ * @remark	None.
+ */
+int app2sd_client_usr_post_move_installed_app(const char *pkgid,
+		app2ext_move_type move_type, uid_t uid);
+int app2sd_client_post_move_installed_app(const char *pkgid,
+		app2ext_move_type move_type);
 
 /**
  * @brief : This API Enables the application in sd card
  for use. This API should be called by AUL.
  * @param[in] pkgid		application package id
-*				[Ex: com.samsung.calculator]
  * @pre			Package must be installed
  * @post	application is enabled in SD card.
  * @return	0 if success,  error code(>0) if fail
@@ -187,7 +192,6 @@ int app2sd_client_on_demand_setup_init(const char *pkgid);
  . This API should be called by Launchpad callback which will be registered
   during app launch for exit action of the application
  * @param[in] pkgid		application package id
-*				[Ex: com.samsung.calculator]
  * @pre			Package must be installed and enabled
  *			and application must be running in SD card
  * @post	application is disabked in SD card.

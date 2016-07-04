@@ -469,8 +469,11 @@ static int app_move()
 	if (ret == APP2EXT_SD_CARD) {
 		printf("pkg %s is in sd card\n", TEST_PKGNAME);
 		printf("pkg %s will be moved to internal memory\n", TEST_PKGNAME);
-		ret = handle->interface.client_move(TEST_PKGNAME,
+		ret = handle->interface.client_pre_move(TEST_PKGNAME,
 			dir_list, APP2EXT_MOVE_TO_PHONE);
+		print_error_code(__func__, ret);
+		ret = handle->interface.client_post_move(TEST_PKGNAME,
+			APP2EXT_MOVE_TO_PHONE);
 		print_error_code(__func__, ret);
 		ret_check = app2ext_usr_get_app_location(TEST_PKGNAME, getuid());
 		if (ret_check == APP2EXT_INTERNAL_MEM)
@@ -478,8 +481,11 @@ static int app_move()
 	} else if (ret == APP2EXT_INTERNAL_MEM) {
 		printf("pkg %s is in internal memory\n", TEST_PKGNAME);
 		printf("pkg %s will be moved to sd card\n", TEST_PKGNAME);
-		ret = handle->interface.client_move(TEST_PKGNAME,
+		ret = handle->interface.client_pre_move(TEST_PKGNAME,
 			dir_list, APP2EXT_MOVE_TO_EXT);
+		print_error_code(__func__, ret);
+		ret = handle->interface.client_post_move(TEST_PKGNAME,
+			APP2EXT_MOVE_TO_EXT);
 		print_error_code(__func__, ret);
 		ret_check = app2ext_usr_get_app_location(TEST_PKGNAME, getuid());
 		if (ret_check == APP2EXT_SD_CARD)
