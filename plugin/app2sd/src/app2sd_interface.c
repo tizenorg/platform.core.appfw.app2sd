@@ -22,6 +22,7 @@
  */
 
 #include <pkgmgr-info.h>
+#include <aul.h>
 
 #include "app2sd_internals.h"
 
@@ -449,6 +450,67 @@ int app2sd_usr_on_demand_setup_init(const char *pkgid, uid_t uid)
 	return ret;
 }
 
+static int _app2sd_application_handler(const pkgmgrinfo_appinfo_h handle, void *data)
+{
+	int ret = 0;
+	int pid = 0;
+	char *appid = NULL;
+	uid_t uid = *(uid_t *)data;
+
+	ret = pkgmgrinfo_appinfo_get_appid(handle, &appid);
+	if (ret < 0) {
+		_E("failed to get appid");
+		return APP2EXT_ERROR_PKGMGR_ERROR;
+	}
+
+	_D("appid(%s), uid(%d)", appid, uid);
+
+	ret = aul_app_is_running_for_uid(appid, uid);
+	if (ret == 0)
+		return APP2EXT_SUCCESS;
+
+	pid = aul_app_get_pid_for_uid(appid, uid);
+	if (pid < 0) {
+		_E("failed to get pid");
+		return APP2EXT_ERROR_KILLAPP_ERROR;
+	}
+
+	ret = aul_terminate_pid_sync_for_uid(pid, uid);
+	if (ret != AUL_R_OK) {
+		_E("failed to kill app");
+		return APP2EXT_ERROR_KILLAPP_ERROR;
+	}
+
+	return APP2EXT_SUCCESS;
+}
+
+static int _app2sd_kill_running_app(const char *pkgid, uid_t uid)
+{
+	int ret = 0;
+	pkgmgrinfo_pkginfo_h handle;
+
+	ret = pkgmgrinfo_pkginfo_get_usr_pkginfo(pkgid, uid, &handle);
+	if (ret < 0) {
+		_E("failed to get pkginfo");
+		return APP2EXT_ERROR_PKGMGR_ERROR;
+	}
+
+	ret = pkgmgrinfo_appinfo_get_usr_list(handle,
+		PMINFO_ALL_APP, _app2sd_application_handler, &uid, uid);
+	if (ret < 0) {
+		_E("failed to get appinfo");
+		return APP2EXT_ERROR_PKGMGR_ERROR;
+	}
+
+	ret = pkgmgrinfo_pkginfo_destroy_pkginfo(handle);
+	if (ret < 0) {
+		_E("failed to destroy pkginfo");
+		return APP2EXT_ERROR_PKGMGR_ERROR;
+	}
+
+	return APP2EXT_SUCCESS;
+}
+
 int app2sd_usr_on_demand_setup_exit(const char *pkgid, uid_t uid)
 {
 	int ret = APP2EXT_SUCCESS;
@@ -456,6 +518,7 @@ int app2sd_usr_on_demand_setup_exit(const char *pkgid, uid_t uid)
 	char loopback_device[FILENAME_MAX] = { 0, };
 	char *encoded_id = NULL;
 	FILE *fp = NULL;
+	int mmc_present = 1;
 
 	/* validate the function parameter recieved */
 	if (pkgid == NULL) {
@@ -463,11 +526,13 @@ int app2sd_usr_on_demand_setup_exit(const char *pkgid, uid_t uid)
 		return APP2EXT_ERROR_INVALID_ARGUMENTS;
 	}
 
+	_app2sd_kill_running_app(pkgid, uid);
+
 	/* check whether MMC is present or not */
 	ret = _app2sd_check_mmc_status();
 	if (ret) {
-		_E("MMC not preset OR Not ready (%d)", ret);
-		return APP2EXT_ERROR_MMC_STATUS;
+		_W("MMC not preset OR Not ready (%d)", ret);
+		mmc_present = 0;
 	}
 
 	encoded_id = _app2sd_get_encoded_name(pkgid, uid);
@@ -490,12 +555,14 @@ int app2sd_usr_on_demand_setup_exit(const char *pkgid, uid_t uid)
 	}
 	free(encoded_id);
 
-	fp = fopen(loopback_device, "r+");
-	if (fp == NULL) {
-		_E("app entry is not present in SD Card");
-		return APP2EXT_ERROR_INVALID_PACKAGE;
+	if (mmc_present) {
+		fp = fopen(loopback_device, "r+");
+		if (fp == NULL) {
+			_E("app entry is not present in SD Card");
+			return APP2EXT_ERROR_INVALID_PACKAGE;
+		}
+		fclose(fp);
 	}
-	fclose(fp);
 
 	ret = _app2sd_unmount_app_content(application_path);
 	if (ret) {
@@ -747,32 +814,6 @@ int app2sd_usr_pre_move_installed_app(const char *pkgid,
 		_E("invalid function arguments");
 		return APP2EXT_ERROR_INVALID_ARGUMENTS;
 	}
-
-	pkgmgrinfo_pkginfo_h info_handle = NULL;
-	pkgmgrinfo_installed_storage storage = PMINFO_INTERNAL_STORAGE;
-	pkgmgr_ret = pkgmgrinfo_pkginfo_get_usr_pkginfo(pkgid, uid, &info_handle);
-	if (pkgmgr_ret < 0) {
-		_E("failed to get pkginfo for pkg(%s), uid(%d), pkgmgr_ret(%d)",
-			pkgid, uid, pkgmgr_ret);
-		return APP2EXT_ERROR_PKGMGR_ERROR;
-	}
-	pkgmgr_ret = pkgmgrinfo_pkginfo_get_installed_storage(info_handle, &storage);
-	if (pkgmgr_ret < 0) {
-		_E("failed to get installed storage for pkg(%s) of uid(%d), pkgmgr_ret(%d)",
-			pkgid, uid, pkgmgr_ret);
-		pkgmgrinfo_pkginfo_destroy_pkginfo(info_handle);
-		return APP2EXT_ERROR_PKGMGR_ERROR;
-	}
-
-	if ((move_type == APP2EXT_MOVE_TO_EXT && storage == PMINFO_EXTERNAL_STORAGE)
-		|| (move_type == APP2EXT_MOVE_TO_PHONE && storage == PMINFO_INTERNAL_STORAGE)) {
-			_E("PKG_EXISTS in [%d] STORAGE", storage);
-			pkgmgrinfo_pkginfo_destroy_pkginfo(info_handle);
-			return APP2EXT_ERROR_PKG_EXISTS;
-	} else {
-		_D("pkgid[%s] move to STORAGE [%d]", pkgid, storage);
-	}
-	pkgmgrinfo_pkginfo_destroy_pkginfo(info_handle);
 
 	ret = __app2sd_create_app2sd_directories(uid);
 	if (ret) {
@@ -1230,8 +1271,8 @@ int app2sd_enable_full_pkg(void)
 
 	dir = opendir(APP2SD_PATH);
 	if (!dir) {
-		if (strerror_r(errno, buf, sizeof(buf)) == 0)
-			_E("failed to opendir (%s)", buf);
+		strerror_r(errno, buf, sizeof(buf));
+		_E("failed to opendir (%s)", buf);
 		return APP2EXT_ERROR_OPEN_DIR;
 	}
 
@@ -1256,15 +1297,13 @@ int app2sd_enable_full_pkg(void)
 			_E("failed to get info from db");
 			break;;
 		}
-		if (pkgid && uid > 0) {
+		if (pkgid) {
 			_D("pkgid(%s), uid(%d)", pkgid, uid);
 			ret = app2sd_usr_on_demand_setup_init(pkgid, uid);
 			if (ret) {
 				_E("error(%d)", ret);
 				break;
 			}
-		}
-		if (pkgid) {
 			free(pkgid);
 			pkgid = NULL;
 		}
@@ -1279,65 +1318,33 @@ int app2sd_enable_full_pkg(void)
 	return ret;
 }
 
+static int _app2sd_info_cb_func(const char *filename, const char *pkgid, uid_t uid)
+{
+	int ret = APP2EXT_SUCCESS;
+
+	if (filename && pkgid) {
+		_D("filename(%s), pkgid(%s), uid(%d)", filename, pkgid, uid);
+		ret = app2sd_usr_on_demand_setup_exit(pkgid, uid);
+		if (ret)
+			_E("error(%d)", ret);
+	}
+
+	return ret;
+}
+
 int app2sd_disable_full_pkg(void)
 {
 	int ret = APP2EXT_SUCCESS;
-	int rc = 0;
-	char buf[FILENAME_MAX] = { 0, };
-	char loopback_device[FILENAME_MAX] = { 0, };
-	DIR *dir = NULL;
-	struct dirent entry;
-	struct dirent *result = NULL;
-	char *pkgid = NULL;
-	uid_t uid = 0;
-
-	dir = opendir(APP2SD_PATH);
-	if (!dir) {
-		if (strerror_r(errno, buf, sizeof(buf)) == 0)
-			_E("failed to opendir (%s)", buf);
-		return APP2EXT_ERROR_OPEN_DIR;
-	}
 
 	ret = _app2sd_initialize_db();
 	if (ret) {
 		_E("app2sd db initialize failed");
-		closedir(dir);
 		return APP2EXT_ERROR_SQLITE_REGISTRY;
 	}
 
-	for (rc = readdir_r(dir, &entry, &result);
-		rc == 0 && result != NULL;
-		rc = readdir_r(dir, &entry, &result)) {
-		if (strcmp(entry.d_name, ".") == 0 ||
-			strcmp(entry.d_name, "..") == 0)
-			continue;
-		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s",
-			APP2SD_PATH, entry.d_name);
-		ret = _app2sd_get_info_from_db(loopback_device,
-			&pkgid, &uid);
-		if (ret) {
-			_E("failed to get info from db");
-			break;
-		}
-		if (pkgid && uid > 0) {
-			_D("pkgid(%s), uid(%d)", pkgid, uid);
-			ret = app2sd_usr_on_demand_setup_exit(pkgid, uid);
-			if (ret) {
-				_E("error(%d)", ret);
-				break;
-			}
-		}
-		if (pkgid) {
-			free(pkgid);
-			pkgid = NULL;
-		}
-	}
-
-	if (pkgid) {
-		free(pkgid);
-		pkgid = NULL;
-	}
-	closedir(dir);
+	ret = _app2sd_get_foreach_info_from_db((app2sd_info_cb)_app2sd_info_cb_func);
+	if (ret)
+		_E("diable full pkg error(%d)", ret);
 
 	return ret;
 }
