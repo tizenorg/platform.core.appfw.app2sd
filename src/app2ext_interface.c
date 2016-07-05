@@ -105,6 +105,9 @@ int app2ext_deinit(app2ext_handle *handle)
 	return 0;
 }
 
+/* use this api only to check external related file existing,
+ * such as .mmc directory and image file under /sdcard/app2sd.
+ */
 int app2ext_usr_get_app_location(const char *pkgid, uid_t uid)
 {
 	FILE *fp = NULL;

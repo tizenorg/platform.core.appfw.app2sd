@@ -236,6 +236,48 @@ FINISH_OFF:
 	return ret;
 }
 
+int _app2sd_get_foreach_info_from_db(app2sd_info_cb cb_func)
+{
+	char *query = NULL;
+	sqlite3_stmt *stmt = NULL;
+	const char *pkgid = NULL;
+	int uid = 0;
+	int ret = 0;
+
+	query = sqlite3_mprintf("select * from app2sd_info");
+	if (query == NULL) {
+		_E("failed to make a query");
+		return APP2EXT_ERROR_SQLITE_REGISTRY;
+	}
+
+	ret = sqlite3_prepare_v2(app2sd_db, query, strlen(query), &stmt, NULL);
+	if (ret != SQLITE_OK) {
+		_E("prepare failed (%s)", sqlite3_errmsg(app2sd_db));
+		sqlite3_free(query);
+		return APP2EXT_ERROR_SQLITE_REGISTRY;
+	}
+
+	ret = APP2EXT_SUCCESS;
+	while (sqlite3_step(stmt) == SQLITE_ROW) {
+		pkgid = (const char *)sqlite3_column_text(stmt, 0);
+		uid = sqlite3_column_int(stmt, 3);
+
+		ret = cb_func(pkgid, (uid_t)uid);
+		if (ret) {
+			_E("app2sd info callback error");
+			break;
+		}
+	}
+
+	if (SQLITE_OK != sqlite3_finalize(stmt)) {
+		_E("error : sqlite3_finalize");
+		ret = APP2EXT_ERROR_SQLITE_REGISTRY;
+	}
+	sqlite3_free(query);
+
+	return ret;
+}
+
 char *_app2sd_get_password_from_db(const char *pkgid, uid_t uid)
 {
 	char *query = NULL;
