@@ -27,6 +27,8 @@
 #include <sys/wait.h>
 #include <gio/gio.h>
 
+#include <pkgmgr-info.h>
+
 #include "app2sd_client_interface.h"
 #include "app2ext_utils.h"
 
@@ -503,6 +505,8 @@ int app2sd_client_usr_pre_move_installed_app(const char *pkgid, GList *dir_list,
 	GVariantBuilder *builder = NULL;
 	GVariant *param = NULL;
 	app2sd_cmd cmd = APP2SD_MOVE_APP_TO_PHONE;
+	pkgmgrinfo_pkginfo_h info_handle = NULL;
+	pkgmgrinfo_installed_storage storage = PMINFO_INTERNAL_STORAGE;
 
 	/* validate the function parameter recieved */
 	if (pkgid == NULL || dir_list == NULL
@@ -511,6 +515,30 @@ int app2sd_client_usr_pre_move_installed_app(const char *pkgid, GList *dir_list,
 		_E("invalid function arguments");
 		return APP2EXT_ERROR_INVALID_ARGUMENTS;
 	}
+
+	ret = pkgmgrinfo_pkginfo_get_usr_pkginfo(pkgid, uid, &info_handle);
+	if (ret < 0) {
+		_E("failed to get pkginfo for pkg(%s), uid(%d), ret(%d)",
+			pkgid, uid, ret);
+		return APP2EXT_ERROR_PKGMGR_ERROR;
+	}
+	ret = pkgmgrinfo_pkginfo_get_installed_storage(info_handle, &storage);
+	if (ret < 0) {
+		_E("failed to get installed storage for pkg(%s) of uid(%d), ret(%d)",
+			pkgid, uid, ret);
+		pkgmgrinfo_pkginfo_destroy_pkginfo(info_handle);
+		return APP2EXT_ERROR_PKGMGR_ERROR;
+	}
+
+	if ((move_type == APP2EXT_MOVE_TO_EXT && storage == PMINFO_EXTERNAL_STORAGE)
+		|| (move_type == APP2EXT_MOVE_TO_PHONE && storage == PMINFO_INTERNAL_STORAGE)) {
+			_E("PKG_EXISTS in [%d] STORAGE", storage);
+			pkgmgrinfo_pkginfo_destroy_pkginfo(info_handle);
+			return APP2EXT_ERROR_PKG_EXISTS;
+	} else {
+		_D("pkgid[%s] move to STORAGE [%d]", pkgid, storage);
+	}
+	pkgmgrinfo_pkginfo_destroy_pkginfo(info_handle);
 
 	if (move_type == APP2EXT_MOVE_TO_EXT)
 		cmd = APP2SD_MOVE_APP_TO_MMC;

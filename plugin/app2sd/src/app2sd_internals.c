@@ -910,6 +910,15 @@ int _app2sd_move_app_to_external(const char *pkgid, GList *dir_list, uid_t uid)
 	snprintf(application_archive_path, FILENAME_MAX - 1, "%s/.archive",
 		application_path);
 
+	ret = mkdir(application_mmc_path, mode);
+	if (ret) {
+		if (errno != EEXIST) {
+			_E("unable to create directory for archiving," \
+				" error(%d)", errno);
+			return APP2EXT_ERROR_CREATE_DIRECTORY;
+		}
+	}
+
 	ret = mkdir(application_archive_path, mode);
 	if (ret) {
 		if (errno != EEXIST) {
