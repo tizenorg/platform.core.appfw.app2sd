@@ -789,22 +789,19 @@ int _app2sd_mount_app_content(const char *application_path, const char *pkgid,
 		break;
 	}
 
-	if (cmd == APP2SD_PRE_UNINSTALL || cmd == APP2SD_MOVE_APP_TO_PHONE ||
-		cmd == APP2SD_PRE_UPGRADE) {
-		/* delete lost+found dir */
-		snprintf(temp_path, FILENAME_MAX - 1, "%s/lost+found",
-			application_mmc_path);
-		ret = _app2sd_delete_directory(temp_path);
-		if (ret) {
-			_E("unable to delete (%s)", temp_path);
-			return APP2EXT_ERROR_DELETE_DIRECTORY;
-		}
-	}
-
 	if (cmd == APP2SD_PRE_INSTALL || cmd == APP2SD_MOVE_APP_TO_MMC ||
 		cmd == APP2SD_PRE_UPGRADE) {
 		ret = _app2sd_create_directory_entry(application_path,
 			pkgid, dir_list, uid);
+	}
+
+	/* change lost+found permission */
+	snprintf(temp_path, FILENAME_MAX - 1, "%s/lost+found",
+			application_mmc_path);
+	ret = _app2sd_make_directory(temp_path, uid);
+	if (ret) {
+		_E("create directory(%s) failed", temp_path);
+		return APP2EXT_ERROR_CREATE_DIRECTORY;
 	}
 
 	return ret;
@@ -909,6 +906,15 @@ int _app2sd_move_app_to_external(const char *pkgid, GList *dir_list, uid_t uid)
 		application_path);
 	snprintf(application_archive_path, FILENAME_MAX - 1, "%s/.archive",
 		application_path);
+
+	ret = mkdir(application_mmc_path, mode);
+	if (ret) {
+		if (errno != EEXIST) {
+			_E("unable to create directory for archiving," \
+				" error(%d)", errno);
+			return APP2EXT_ERROR_CREATE_DIRECTORY;
+		}
+	}
 
 	ret = mkdir(application_archive_path, mode);
 	if (ret) {

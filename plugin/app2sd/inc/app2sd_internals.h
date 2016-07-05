@@ -171,6 +171,10 @@ int _app2sd_set_info_in_db(const char *pkgid, const char *passwd,
 
 int _app2sd_get_info_from_db(const char *filename, char **pkgid, uid_t *uid);
 
+typedef int (*app2sd_info_cb)(const char *pkgid, uid_t uid);
+
+int _app2sd_get_foreach_info_from_db(app2sd_info_cb cb_func);
+
 int _app2sd_force_clean(const char *pkgid, const char *application_path,
 		const char *loopback_device, uid_t uid);
 
