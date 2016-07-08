@@ -265,7 +265,7 @@ int _app2sd_get_foreach_info_from_db(app2sd_info_cb cb_func)
 		ret = cb_func(pkgid, (uid_t)uid);
 		if (ret) {
 			_E("app2sd info callback error");
-			break;
+			/* continue */
 		}
 	}
 
