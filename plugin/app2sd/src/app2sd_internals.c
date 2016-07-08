@@ -1089,7 +1089,6 @@ int _app2sd_move_app_to_external(const char *pkgid, GList *dir_list, uid_t uid)
 		goto ERR;
 	}
 
-	sync();
 	return APP2EXT_SUCCESS;
 
 ERR:
@@ -1291,14 +1290,14 @@ int _app2sd_move_app_to_internal(const char *pkgid, GList *dir_list, uid_t uid)
 			ret = unlink(temp_dir_path);
 			if (ret) {
 				if (errno == ENOENT) {
-					_E("directory (%s) does not exist",
+					_W("directory (%s) does not exist",
 						temp_dir_path);
 				} else {
 					_E("unable to remove the symbolic link file (%s)," \
 						" it is already unlinked",
 						temp_dir_path);
+					goto ERR;
 				}
-				goto ERR;
 			}
 
 			/* Copy content to destination */

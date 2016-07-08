@@ -848,6 +848,7 @@ int app2sd_usr_pre_move_installed_app(const char *pkgid,
 		}
 	}
 
+	sync();
 	return APP2EXT_SUCCESS;
 }
 

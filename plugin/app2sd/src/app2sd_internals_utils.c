@@ -161,7 +161,7 @@ void _app2sd_delete_symlink(const char *dirname)
 				_E("force unlink [%s]", abs_filename);
 				if (unlink(abs_filename)) {
 					if (errno == ENOENT)
-						_E("Unable to access file %s", abs_filename);
+						_W("Unable to access file %s", abs_filename);
 					else
 						_E("Unable to delete %s", abs_filename);
 				}
@@ -185,10 +185,39 @@ void _app2sd_delete_symlink(const char *dirname)
 int _app2sd_copy_dir(const char *src, const char *dest)
 {
 	int ret = APP2EXT_SUCCESS;
+	DIR *dir = NULL;
 	const char *argv_bin[] = { "/bin/cp", "-raf", src, dest, NULL };
+
+	/* check existence  before copy */
+	dir = opendir(src);
+	if (dir) {
+		closedir(dir);
+	} else {
+		if (errno == ENOENT) {
+			_W("src(%s) not exist, skip!", src);
+			return ret;
+		} else {
+			_E("failed to open src(%s) dir, errno(%d)", errno);
+			return APP2EXT_ERROR_MOVE;
+		}
+	}
+
+	dir = opendir(dest);
+	if (dir) {
+		closedir(dir);
+	} else {
+		if (errno == ENOENT) {
+			_E("dest(%s) not exist, failed!", dest);
+			return APP2EXT_ERROR_MOVE;
+		} else {
+			_E("failed to open dest(%s) dir, errno(%d)", errno);
+			return APP2EXT_ERROR_MOVE;
+		}
+	}
+
 	ret = _xsystem(argv_bin);
 	if (ret) {
-		_E("copy fail");
+		_E("failed to copy dir, errno(%d)", errno);
 		return APP2EXT_ERROR_MOVE;
 	}
 	return ret;
