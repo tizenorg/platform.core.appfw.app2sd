@@ -5,26 +5,30 @@ PROJECT(app2ext C)
 SET(VERSION_MAJOR 0)
 SET(VERSION "${VERSION_MAJOR}.4.2")
 
-ADD_DEFINITIONS("-DTIZEN_FEATURE_APP2SD_DMCRYPT_ENCRYPTION")
-
-#Add your submodule directory name
-ADD_SUBDIRECTORY(plugin/app2sd)
-
 ### Required packages
 INCLUDE(FindPkgConfig)
-pkg_check_modules(pkgs REQUIRED dlog)
-
+pkg_check_modules(pkgs REQUIRED libssl dlog openssl pkgmgr-info libtzplatform-config gio-2.0 glib-2.0 minizip aul storage)
 FOREACH(flag ${pkgs_CFLAGS})
 	SET(EXTRA_CFLAGS "${EXTRA_CFLAGS} ${flag}")
 ENDFOREACH(flag)
 
-pkg_check_modules(libpkgs REQUIRED dlog)
-
+pkg_check_modules(libpkgs REQUIRED libssl dlog openssl pkgmgr-info db-util gio-2.0 glib-2.0 minizip)
 FOREACH(flag ${libpkgs_CFLAGS})
 	SET(EXTRA_CFLAGS "${EXTRA_CFLAGS} ${flag}")
 ENDFOREACH(flag)
 
+SET(EXTRA_CFLAGS "${EXTRA_CFLAGS} -fvisibility=hidden -Wno-unused-result")
+SET(EXTRA_CFLAGS "${EXTRA_CFLAGS} -g -Wall -Werror")
 SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${EXTRA_CFLAGS}")
+SET(CMAKE_EXE_LINKER_FLAGS "-Wl,--as-needed")
+
+IF(TIZEN_FEATURE_APP2SD_PLUGIN)
+	ADD_DEFINITIONS("-DTIZEN_FEATURE_APP2SD_PLUGIN")
+	ADD_DEFINITIONS("-DTIZEN_FEATURE_APP2SD_DMCRYPT_ENCRYPTION")
+
+	#Add your submodule directory name
+	ADD_SUBDIRECTORY(plugin/app2sd)
+ENDIF(TIZEN_FEATURE_APP2SD_PLUGIN)
 
 ### Local include directories
 INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/inc
@@ -59,4 +63,6 @@ INSTALL(TARGETS ${APP2EXT} DESTINATION ${LIB_INSTALL_DIR} COMPONENT RuntimeLibra
 INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/app2sd.pc DESTINATION ${LIB_INSTALL_DIR}/pkgconfig)
 INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/inc/app2ext_interface.h DESTINATION include)
 
+IF(TIZEN_FEATURE_APP2SD_PLUGIN)
 ADD_SUBDIRECTORY(test)
+ENDIF(TIZEN_FEATURE_APP2SD_PLUGIN)
