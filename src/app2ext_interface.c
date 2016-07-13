@@ -165,7 +165,6 @@ int app2ext_usr_get_app_location(const char *pkgid, uid_t uid)
 		 */
 		fp = fopen(application_mmc_path, "r");
 		if (fp == NULL) {
-			_D("internal mem");
 			return APP2EXT_INTERNAL_MEM;
 		} else {
 			fclose(fp);

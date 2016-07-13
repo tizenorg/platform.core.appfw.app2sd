@@ -41,11 +41,8 @@ char *_app2sd_get_encoded_name(const char *pkgid, uid_t uid)
 	checksum = g_checksum_new(G_CHECKSUM_MD5);
 	g_checksum_update(checksum, (const guchar *)source_name, strlen(source_name));
 	temp_string = (char *)g_checksum_get_string(checksum);
-	_D("temp_string(%s)", temp_string);
 	new_name = strdup(temp_string);
 	g_checksum_free(checksum);
-
-	_D("new_name(%s)", new_name);
 
 	return new_name;
 }
