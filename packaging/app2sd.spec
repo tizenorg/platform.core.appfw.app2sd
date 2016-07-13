@@ -19,6 +19,18 @@ BuildRequires:  pkgconfig(aul)
 BuildRequires:  pkgconfig(storage)
 BuildRequires:  cmake
 
+%if "%{?profile}" == "common"
+%define tizen_feature_app2sd_plugin 1
+%endif
+
+%if "%{?profile}" == "mobile"
+%define tizen_feature_app2sd_plugin 1
+%endif
+
+%if "%{?profile}" == "tv"
+%define tizen_feature_app2sd_plugin 1
+%endif
+
 %description
 Tizen application installation on external memory
 
@@ -42,7 +54,14 @@ Tizen application installation on external memory (test)
 %setup -q
 
 %build
-%cmake . -DUNITDIR=%{_unitdir}
+%if 0%{?tizen_feature_app2sd_plugin}
+_APP2SD_PLUGIN=ON
+%else
+_APP2SD_PLUGIN=OFF
+%endif
+
+%cmake . -DUNITDIR=%{_unitdir} \
+    -DTIZEN_FEATURE_APP2SD_PLUGIN:BOOL=${_APP2SD_PLUGIN}
 
 make %{?jobs:-j%jobs}
 
@@ -61,21 +80,26 @@ cp LICENSE %{buildroot}/usr/share/license/%{name}
 %manifest app2sd.manifest
 %defattr(-,root,root,-)
 %{_libdir}/libapp2ext.so.*
+%if 0%{?tizen_feature_app2sd_plugin}
 %{_libdir}/libapp2sd.so*
 %{_bindir}/app2sd-server
 %{_unitdir}/app2sd-server.service
 %{_datadir}/dbus-1/system-services/org.tizen.app2sd.service
 %config %{_sysconfdir}/dbus-1/system.d/org.tizen.app2sd.conf
+%endif
 /usr/share/license/%{name}
 
 %files devel
 %defattr(-,root,root,-)
 %{_includedir}/app2ext_interface.h
 %{_libdir}/pkgconfig/app2sd.pc
+%if 0%{?tizen_feature_app2sd_plugin}
 %{_libdir}/libapp2sd.so
+%endif
 %{_libdir}/libapp2ext.so
 
+%if 0%{?tizen_feature_app2sd_plugin}
 %files test
 %defattr(-,root,root,-)
 %{_bindir}/test_app2ext
-
+%endif
