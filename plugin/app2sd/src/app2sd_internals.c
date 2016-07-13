@@ -22,7 +22,6 @@
  */
 
 #include <dirent.h>
-#include <openssl/sha.h>
 #include <time.h>
 #include <pwd.h>
 

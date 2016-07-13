@@ -1,53 +1,37 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
-PROJECT(app2sd C)
+# Required packages
+pkg_check_modules(app2sd_pkgs REQUIRED dlog pkgmgr-info gio-2.0 glib-2.0 db-util libtzplatform-config aul storage)
+pkg_check_modules(app2sd_libpkgs REQUIRED dlog pkgmgr-info gio-2.0 glib-2.0)
 
-### Required packages
-INCLUDE(FindPkgConfig)
-pkg_check_modules(pkgs REQUIRED libssl dlog openssl pkgmgr-info libtzplatform-config gio-2.0 glib-2.0 minizip aul)
-
-FOREACH(flag ${pkgs_CFLAGS})
-	SET(EXTRA_CFLAGS "${EXTRA_CFLAGS} ${flag}")
+# Compiler flags
+FOREACH(flag ${app2sd_pkgs_CFLAGS})
+	SET(APP2SD_CFLAGS "${APP2SD_CFLAGS} ${flag}")
 ENDFOREACH(flag)
-
-pkg_check_modules(libpkgs REQUIRED libssl dlog openssl pkgmgr-info db-util gio-2.0 glib-2.0 minizip)
-
-FOREACH(flag ${libpkgs_CFLAGS})
-	SET(EXTRA_CFLAGS "${EXTRA_CFLAGS} ${flag}")
+FOREACH(flag ${app2sd_libpkgs_CFLAGS})
+	SET(APP2SD_CFLAGS "${APP2SD_CFLAGS} ${flag}")
 ENDFOREACH(flag)
+SET(CMAKE_C_FLAGS "${EXTRA_CFLAGS} ${APP2SD_CFLAGS}")
 
-SET(EXTRA_CFLAGS "${EXTRA_CFLAGS} -fvisibility=hidden -Wno-unused-result")
-SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${EXTRA_CFLAGS}")
-
-### Local include directories
+# Local include directories
 INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/inc
 	${CMAKE_SOURCE_DIR}/common/inc
 	${CMAKE_SOURCE_DIR}/plugin/app2sd/inc)
 
-SET(app2sd_dir "${CMAKE_SOURCE_DIR}/plugin/app2sd")
-SET(app2sd_src_dir "${app2sd_dir}/src")
-
-## build app2sd library
+# build app2sd library
 SET(APP2SD "app2sd")
+SET(app2sd_src_dir "${CMAKE_SOURCE_DIR}/plugin/app2sd/src")
 SET(libapp2sd_SOURCES
 	${app2sd_src_dir}/app2sd_client_interface.c
 	${CMAKE_SOURCE_DIR}/common/src/app2ext_utils.c)
-SET(libapp2sd_LDFLAGS " -L${LIB_INSTALL_DIR} -lcrypto -module -avoid-version ")
-SET(libapp2sd_CFLAGS  " ${CFLAGS} -fPIC ")
 
 ADD_LIBRARY(${APP2SD} SHARED ${libapp2sd_SOURCES})
 SET_TARGET_PROPERTIES(${APP2SD} PROPERTIES SOVERSION ${VERSION_MAJOR})
 SET_TARGET_PROPERTIES(${APP2SD} PROPERTIES VERSION ${VERSION})
-SET_TARGET_PROPERTIES(${APP2SD} PROPERTIES COMPILE_FLAGS "${libapp2sd_CFLAGS}")
-TARGET_LINK_LIBRARIES(${APP2SD} ${libpkgs_LDFLAGS} "-lm")
-
-## devel package
-
-SET(CMAKE_INSTALL_PREFIX "/usr")
-SET(PREFIX ${CMAKE_INSTALL_PREFIX})
+SET_TARGET_PROPERTIES(${APP2SD} PROPERTIES COMPILE_FLAGS ${CFLAGS} "-fPIC")
+TARGET_LINK_LIBRARIES(${APP2SD} ${app2sd_libpkgs_LDFLAGS})
 
 INSTALL(TARGETS ${APP2SD} DESTINATION ${LIB_INSTALL_DIR} COMPONENT RuntimeLibraries)
 
-## build app2sd-server binary
+# build app2sd-server binary
 SET(APP2SD_SERVER "app2sd-server")
 SET(app2sd_server_SOURCES
 	${app2sd_src_dir}/app2sd_internals.c
@@ -59,7 +43,7 @@ SET(app2sd_server_SOURCES
 ADD_EXECUTABLE(${APP2SD_SERVER} ${app2sd_server_SOURCES})
 SET_TARGET_PROPERTIES(${APP2SD_SERVER} PROPERTIES COMPILE_FLAGS ${CFLAGS} "-fPIE ")
 SET_TARGET_PROPERTIES(${APP2SD_SERVER} PROPERTIES LINK_FLAGS "-pie")
-TARGET_LINK_LIBRARIES(${APP2SD_SERVER} app2sd ${pkgs_LDFLAGS})
+TARGET_LINK_LIBRARIES(${APP2SD_SERVER} app2sd ${app2sd_pkgs_LDFLAGS} "-lm")
 
 CONFIGURE_FILE(org.tizen.app2sd.service.in org.tizen.app2sd.service @ONLY)
 CONFIGURE_FILE(org.tizen.app2sd.conf.in org.tizen.app2sd.conf @ONLY)
@@ -67,7 +51,7 @@ CONFIGURE_FILE(app2sd-server.service.in app2sd-server.service @ONLY)
 
 INSTALL(TARGETS ${APP2SD_SERVER} DESTINATION bin)
 INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/org.tizen.app2sd.service DESTINATION
-	${PREFIX}/share/dbus-1/system-services/)
+	${CMAKE_INSTALL_PREFIX}/share/dbus-1/system-services/)
 INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/org.tizen.app2sd.conf DESTINATION
 	${SYSCONF_INSTALL_DIR}/dbus-1/system.d/)
 INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/app2sd-server.service DESTINATION ${UNITDIR})

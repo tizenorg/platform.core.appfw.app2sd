@@ -5,8 +5,8 @@ libdir=@LIB_INSTALL_DIR@
 includedir=@INCLUDE_INSTALL_DIR@
 
 Name: app2sd
-Description: The app2sd Library
+Description: app2ext layer
 Version: 1.1.0
 Requires:
 Cflags: -I${includedir}
-Libs: -L${libdir} -lapp2sd -lapp2ext
+Libs: -L${libdir} -lapp2ext
