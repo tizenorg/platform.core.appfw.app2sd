@@ -1,23 +1,6 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 PROJECT(app2sd C)
 
-### Required packages
-INCLUDE(FindPkgConfig)
-pkg_check_modules(pkgs REQUIRED libssl dlog openssl pkgmgr-info libtzplatform-config gio-2.0 glib-2.0 minizip aul storage)
-
-FOREACH(flag ${pkgs_CFLAGS})
-	SET(EXTRA_CFLAGS "${EXTRA_CFLAGS} ${flag}")
-ENDFOREACH(flag)
-
-pkg_check_modules(libpkgs REQUIRED libssl dlog openssl pkgmgr-info db-util gio-2.0 glib-2.0 minizip)
-
-FOREACH(flag ${libpkgs_CFLAGS})
-	SET(EXTRA_CFLAGS "${EXTRA_CFLAGS} ${flag}")
-ENDFOREACH(flag)
-
-SET(EXTRA_CFLAGS "${EXTRA_CFLAGS} -fvisibility=hidden -Wno-unused-result")
-SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${EXTRA_CFLAGS}")
-
 ### Local include directories
 INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/inc
 	${CMAKE_SOURCE_DIR}/common/inc
