@@ -29,6 +29,7 @@
 #include <sys/types.h>
 #include <getopt.h>
 #include <unzip.h>
+#include <storage-internal.h>
 
 #include "app2ext_interface.h"
 #include "app2ext_utils.h"
@@ -504,6 +505,8 @@ int main(int argc, char **argv)
 	int ret = 0;
 	int opt_idx = 0;
 	int c;
+	int storage_id = 0;
+	char *sd_mount_path = NULL;
 	uid_t uid = getuid();
 
 	/* check user */
@@ -514,6 +517,22 @@ int main(int argc, char **argv)
 		return 0;
 	} else {
 		printf("test for user(%d) app\n", uid);
+	}
+
+	/* check sdcard info */
+	ret = storage_get_primary_sdcard(&storage_id, &sd_mount_path);
+	if (ret != STORAGE_ERROR_NONE) {
+		printf("failed to get primary sdcard (%d)\n", ret);
+		if (sd_mount_path)
+			free(sd_mount_path);
+		return -1;
+	}
+	if (sd_mount_path) {
+		printf("primary sdcard: id(%d), mount_path(%s)\n",
+		storage_id, sd_mount_path);
+		free(sd_mount_path);
+	} else {
+		printf("there is no primary sdcard\n");
 	}
 
 	handle = app2ext_init(APP2EXT_SD_CARD);

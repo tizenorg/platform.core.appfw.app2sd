@@ -848,7 +848,8 @@ static int _app2sd_move_to_archive(const char *src_path, const char *arch_path)
 	return ret;
 }
 
-int _app2sd_move_app_to_external(const char *pkgid, GList *dir_list, uid_t uid)
+static int _app2sd_move_app_to_external(const char *pkgid, GList *dir_list,
+		uid_t uid, char *mmc_path)
 {
 	int ret = APP2EXT_SUCCESS;
 	mode_t mode = DIR_PERMS;
@@ -871,19 +872,12 @@ int _app2sd_move_app_to_external(const char *pkgid, GList *dir_list, uid_t uid)
 	char err_buf[1024] = { 0,};
 	char *encoded_id = NULL;
 
-	/* check whether MMC is present or not */
-	ret = _app2sd_check_mmc_status();
-	if (ret) {
-		_E("MMC not preset OR Not ready(%d)", ret);
-		return APP2EXT_ERROR_MMC_STATUS;
-	}
-
 	encoded_id = _app2sd_get_encoded_name(pkgid, uid);
 	if (encoded_id == NULL)
 		return APP2EXT_ERROR_MEMORY_ALLOC_FAILED;
 
-	snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s",
-			APP2SD_PATH, encoded_id);
+	snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s/%s",
+			mmc_path, EXTIMG_DIR, encoded_id);
 	free(encoded_id);
 	if (_is_global(uid)) {
 		snprintf(application_path, FILENAME_MAX - 1, "%s/%s",
@@ -948,7 +942,7 @@ int _app2sd_move_app_to_external(const char *pkgid, GList *dir_list, uid_t uid)
 	reqd_disk_size = reqd_size + ceil(reqd_size * 0.2);
 
 	/* find avialable free memory in the MMC card */
-	ret = _app2sd_get_available_free_memory(MMC_PATH, &free_mmc_mem);
+	ret = _app2sd_get_available_free_memory(mmc_path, &free_mmc_mem);
 	if (ret) {
 		_E("unable to get available free memory in MMC (%d)", ret);
 		return APP2EXT_ERROR_MMC_STATUS;
@@ -1102,7 +1096,8 @@ ERR:
 	return ret;
 }
 
-int _app2sd_move_app_to_internal(const char *pkgid, GList *dir_list, uid_t uid)
+static int _app2sd_move_app_to_internal(const char *pkgid, GList *dir_list,
+		uid_t uid, char *mmc_path)
 {
 	int ret = APP2EXT_SUCCESS;
 	mode_t mode = DIR_PERMS;
@@ -1122,19 +1117,12 @@ int _app2sd_move_app_to_internal(const char *pkgid, GList *dir_list, uid_t uid)
 	char err_buf[1024] = {0,};
 	char *encoded_id = NULL;
 
-	/* check whether MMC is present or not */
-	ret = _app2sd_check_mmc_status();
-	if (ret) {
-		_E("MMC not preset OR Not ready(%d)", ret);
-		return APP2EXT_ERROR_MMC_STATUS;
-	}
-
 	encoded_id = _app2sd_get_encoded_name(pkgid, uid);
 	if (encoded_id == NULL)
 		return APP2EXT_ERROR_MEMORY_ALLOC_FAILED;
 
-	snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s",
-			APP2SD_PATH, encoded_id);
+	snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s/%s",
+			mmc_path, EXTIMG_DIR, encoded_id);
 	free(encoded_id);
 	if (_is_global(uid)) {
 		snprintf(application_path, FILENAME_MAX - 1, "%s/%s",
@@ -1378,27 +1366,22 @@ ERR:
 }
 
 int _app2sd_usr_move_app(const char *pkgid, app2ext_move_type move_type,
-		GList *dir_list, uid_t uid)
+		GList *dir_list, uid_t uid, char *mmc_path)
 {
 	int ret = APP2EXT_SUCCESS;
 
-	/* Check whether MMC is present or not */
-	ret = _app2sd_check_mmc_status();
-	if (ret) {
-		_E("MMC not preset OR Not ready(%d)", ret);
-		return APP2EXT_ERROR_MMC_STATUS;
-	}
-
 	switch (move_type) {
 	case APP2EXT_MOVE_TO_EXT:
-		ret = _app2sd_move_app_to_external(pkgid, dir_list, uid);
+		ret = _app2sd_move_app_to_external(pkgid, dir_list,
+			uid, mmc_path);
 		if (ret) {
 			_E("move app to external memory failed(%d)", ret);
 			return ret;
 		}
 		break;
 	case APP2EXT_MOVE_TO_PHONE:
-		ret = _app2sd_move_app_to_internal(pkgid, dir_list, uid);
+		ret = _app2sd_move_app_to_internal(pkgid, dir_list,
+			uid, mmc_path);
 		if (ret) {
 			_E("move app to internal memory failed(%d)", ret);
 			return ret;
