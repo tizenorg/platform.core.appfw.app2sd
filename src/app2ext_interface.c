@@ -105,91 +105,9 @@ int app2ext_deinit(app2ext_handle *handle)
 	return 0;
 }
 
-/* use this api only to check external related file existing,
- * such as .mmc directory and image file under /sdcard/app2sd.
- */
-int app2ext_usr_get_app_location(const char *pkgid, uid_t uid)
-{
-	FILE *fp = NULL;
-	char loopback_device[FILENAME_MAX] = { 0, };
-	char application_path[FILENAME_MAX] = { 0, };
-	char application_mmc_path[FILENAME_MAX] = { 0, };
-	char *encoded_id = NULL;
-
-	/* validate the function parameter received */
-	if (pkgid == NULL) {
-		_E("invalid func parameters");
-		return -1;
-	}
-
-	if (_is_global(uid)) {
-		snprintf(application_path, FILENAME_MAX - 1, "%s/%s",
-			tzplatform_getenv(TZ_SYS_RW_APP), pkgid);
-		snprintf(application_mmc_path, FILENAME_MAX - 1, "%s/%s/.mmc",
-			tzplatform_getenv(TZ_SYS_RW_APP), pkgid);
-	} else {
-		tzplatform_set_user(uid);
-		snprintf(application_path, FILENAME_MAX - 1, "%s/%s",
-			tzplatform_getenv(TZ_USER_APP), pkgid);
-		snprintf(application_mmc_path, FILENAME_MAX - 1, "%s/%s/.mmc",
-			tzplatform_getenv(TZ_USER_APP), pkgid);
-		tzplatform_reset_user();
-	}
-	encoded_id = _app2sd_get_encoded_name(pkgid, uid);
-	if (encoded_id == NULL)
-		return -1;
-
-	snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s",
-		APP2SD_PATH, encoded_id);
-	free(encoded_id);
-
-	/* check whether application is in external memory or not */
-	fp = fopen(loopback_device, "r");
-	if (fp != NULL) {
-		fclose(fp);
-		fp = NULL;
-		_D("sd card");
-		return APP2EXT_SD_CARD;
-	}
-
-	/* check whether application is in internal or not */
-	fp = fopen(application_path, "r");
-	if (fp == NULL) {
-		_D("app_dir_path open failed, " \
-			"package not installed");
-		return APP2EXT_NOT_INSTALLED;
-	} else {
-		fclose(fp);
-		/* check whether the application is installed in SD card
-		 * but SD card is not present
-		 */
-		fp = fopen(application_mmc_path, "r");
-		if (fp == NULL) {
-			return APP2EXT_INTERNAL_MEM;
-		} else {
-			fclose(fp);
-			_E("app_mmc_internal_path exists, " \
-				"error mmc status");
-			return -1;
-		}
-	}
-}
-
-int app2ext_get_app_location(const char *pkgid)
-{
-	int ret = 0;
-
-	ret = app2ext_usr_get_app_location(pkgid, getuid());
-
-	return ret;
-}
-
 int app2ext_usr_enable_external_pkg(const char *pkgid, uid_t uid)
 {
-	FILE *fp = NULL;
 	app2ext_handle *handle = NULL;
-	char loopback_device[FILENAME_MAX] = { 0, };
-	char *encoded_id = NULL;
 
 	/* validate the function parameter received */
 	if (pkgid == NULL) {
@@ -197,29 +115,14 @@ int app2ext_usr_enable_external_pkg(const char *pkgid, uid_t uid)
 		return -1;
 	}
 
-	encoded_id = _app2sd_get_encoded_name(pkgid, uid);
-	if (encoded_id == NULL)
+	handle = app2ext_init(APP2EXT_SD_CARD);
+	if (handle == NULL) {
+		_E("app2ext init failed");
 		return -1;
-
-	snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s",
-		APP2SD_PATH, encoded_id);
-	free(encoded_id);
-
-	/* check whether application is in external memory or not */
-	fp = fopen(loopback_device, "r");
-	if (fp != NULL) {
-		fclose(fp);
-		fp = NULL;
-
-		handle = app2ext_init(APP2EXT_SD_CARD);
-		if (handle == NULL) {
-			_E("app2ext init failed");
-			return -1;
-		}
-
-		handle->interface.client_usr_enable(pkgid, uid);
-		app2ext_deinit(handle);
 	}
+
+	handle->interface.client_usr_enable(pkgid, uid);
+	app2ext_deinit(handle);
 
 	return 0;
 }
@@ -237,8 +140,6 @@ int app2ext_usr_disable_external_pkg(const char *pkgid, uid_t uid)
 {
 	FILE *fp = NULL;
 	app2ext_handle *handle = NULL;
-	char loopback_device[FILENAME_MAX] = { 0, };
-	char *encoded_id = NULL;
 
 	/* validate the function parameter received */
 	if (pkgid == NULL) {
@@ -246,29 +147,13 @@ int app2ext_usr_disable_external_pkg(const char *pkgid, uid_t uid)
 		return -1;
 	}
 
-	encoded_id = _app2sd_get_encoded_name(pkgid, uid);
-	if (encoded_id == NULL)
+	handle = app2ext_init(APP2EXT_SD_CARD);
+	if (handle == NULL) {
+		_E("app2ext init failed");
 		return -1;
-
-	snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s",
-		APP2SD_PATH, encoded_id);
-	free(encoded_id);
-
-	/* check whether application is in external memory or not */
-	fp = fopen(loopback_device, "r");
-	if (fp != NULL) {
-		fclose(fp);
-		fp = NULL;
-
-		handle = app2ext_init(APP2EXT_SD_CARD);
-		if (handle == NULL) {
-			_E("app2ext init failed");
-			return -1;
-		}
-
-		handle->interface.client_usr_disable(pkgid, uid);
-		app2ext_deinit(handle);
 	}
+	handle->interface.client_usr_disable(pkgid, uid);
+	app2ext_deinit(handle);
 
 	return 0;
 }

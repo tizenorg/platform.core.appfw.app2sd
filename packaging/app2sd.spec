@@ -16,6 +16,7 @@ BuildRequires:  pkgconfig(libtzplatform-config)
 BuildRequires:  pkgconfig(gio-2.0)
 BuildRequires:  pkgconfig(glib-2.0)
 BuildRequires:  pkgconfig(aul)
+BuildRequires:  pkgconfig(storage)
 BuildRequires:  cmake
 
 %if "%{?profile}" == "common"
