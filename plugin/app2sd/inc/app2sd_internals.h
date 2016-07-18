@@ -71,101 +71,102 @@ typedef enum mount_type_t {
 	MOUNT_TYPE_RW_REMOUNT
 } mount_type;
 
-/*Checks whether mmc is present or not*/
-int _app2sd_check_mmc_status(void);
+/* checks whether mmc is present or not */
+/* sd_path should be freed after use */
+int _app2sd_check_mmc_status(char **sd_path);
 
-/*this function is similar to system()*/
+/* this function is similar to system() */
 int _xsystem(const char *argv[]);
 
-/*this function will return the free available memory on the SD Card*/
-int _app2sd_get_available_free_memory(const char *sd_path, int *free_mem);
+/* this function will return the free available memory on the SD Card */
+int _app2sd_get_available_free_memory(char *mmc_path, int *free_mem);
 
-/*Function to move the application from/to SD Card*/
+/* function to move the application from/to SD Card */
 int _app2sd_usr_move_app(const char *pkgid, app2ext_move_type move_cmd,
-		GList *dir_list, uid_t uid);
+		GList *dir_list, uid_t uid, char *mmc_path);
 
-/*utility to delete symbolic link*/
+/* utility to delete symbolic link */
 void _app2sd_delete_symlink(const char *dirname);
 
-/*utility to calculate the size of a directory in MB*/
+/* utility to calculate the size of a directory in MB */
 unsigned long long _app2sd_calculate_dir_size(char *dirname);
 
-/*utility to calculate the size of a file in MB*/
+/* utility to calculate the size of a file in MB */
 unsigned long long _app2sd_calculate_file_size(const char *filename);
 
-/*Utility to copy a directory*/
+/* utility to copy a directory */
 int _app2sd_copy_dir(const char *src, const char *dest);
 
-/*Utility to rename a directory*/
+/* utility to rename a directory */
 int _app2sd_rename_dir(const char *old_name, const char *new_name);
 
-/* Utility to create symlinks */
+/* utility to create symlinks */
 int _app2sd_create_symlink(char *pkgid);
 
-/*This function finds the associated device node for the app*/
+/* this function finds the associated device node for the app */
 char *_app2sd_find_associated_device_node(const char *loopback_device);
 
-/*This function does the loopback encryption for app*/
+/* this function does the loopback encryption for app */
 char *_app2sd_do_loopback_encryption_setup(const char *pkgid,
 		const char *loopback_device, uid_t uid);
 
-/*This function detaches the loopback device*/
+/* this function detaches the loopback device */
 char *_app2sd_detach_loop_device(const char *device);
 
-/*This function finds loopback device associated with the app*/
+/* this function finds loopback device associated with the app */
 char *_app2sd_find_associated_device(const char *loopback_device);
 
-/*This function creates loopback device*/
+/* this function creates loopback device */
 int _app2sd_create_loopback_device(const char *pkgid,
 		const char *loopback_device, int size);
 
-/*This function deletes loopback device associated with the app*/
+/* this function deletes loopback device associated with the app */
 int _app2sd_delete_loopback_device(const char *loopback_device);
 
-/*This function creates ext4 FS on the device path*/
+/* this function creates ext4 FS on the device path */
 int _app2sd_create_file_system(const char *device_path);
 
-/*This function mounts the app content on the device node*/
+/* this function mounts the app content on the device node */
 int _app2sd_mount_app_content(const char *application_path, const char *pkgid,
 		const char *dev, int mount_type, GList* dir_list,
 		app2sd_cmd cmd, uid_t uid);
 
-/*This function unmounts the app content */
+/* this function unmounts the app content */
 int _app2sd_unmount_app_content(const char *application_path);
 
-/*This function removes the loopbck encryption setup for the app*/
+/* this function removes the loopbck encryption setup for the app */
 int _app2sd_remove_loopback_encryption_setup(const char *loopback_device);
 
-/*This function removes all of loopbck encryption setup for the app*/
+/* this function removes all of loopbck encryption setup for the app */
 int _app2sd_remove_all_loopback_encryption_setups(const char *loopback_device);
 
-/*This function updates loopback device size*/
+/* this function updates loopback device size */
 int _app2sd_update_loopback_device_size(const char *pkgid,
 		const char *loopback_device, const char *application_path,
 		const char *temp_pkgid, const char *temp_loopback_device,
 		const char *temp_application_path, int size, GList* dir_list,
 		uid_t uid);
 
-/* This generates password */
+/* this generates password */
 char *_app2sd_generate_password(const char *pkgid);
 
-/*This function encrypts device*/
+/* this function encrypts device */
 char *_app2sd_encrypt_device(const char *device, const char *loopback_device,
 		char *passwd);
 
-/*This function finds free device*/
+/* this function finds free device */
 char *_app2sd_find_free_device(void);
 
-/*This function initializes app2sd DB*/
+/* this function initializes app2sd DB */
 int _app2sd_initialize_db();
 
-/*This function is used to get password from db*/
+/* this function is used to get password from db */
 char *_app2sd_get_password_from_db(const char *pkgid, uid_t uid);
 
-/*This function removes info from db */
+/* this function removes info from db */
 int _app2sd_remove_info_from_db(const char *pkgid, uid_t uid);
 
-/* This functions save info in db */
+/* this functions save info in db */
 int _app2sd_set_info_in_db(const char *pkgid, const char *passwd,
 		const char *loopback_device, uid_t uid);
 
@@ -179,18 +180,18 @@ int _app2sd_force_clean(const char *pkgid, const char *application_path,
 		const char *loopback_device, uid_t uid);
 
 #ifdef TIZEN_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
-/*This function setup dmcrypt header in the app2sd file */
+/* this function setup dmcrypt header in the app2sd file */
 int _app2sd_dmcrypt_setup_device(const char *pkgid,
 		const char *loopback_device, bool is_dup, uid_t uid);
 
-/*This function maps the app2sd file with a dmcrypt device node */
+/* this function maps the app2sd file with a dmcrypt device node */
 int _app2sd_dmcrypt_open_device(const char *pkgid, const char *loopback_device,
 		bool is_dup, uid_t uid, char **dev_node);
 
-/*This function remove dmcrypt device node */
+/* this function remove dmcrypt device node */
 int _app2sd_dmcrypt_close_device(const char *pkgid, uid_t uid);
 
-/*This function find associated dmcrypt device node */
+/* this function find associated dmcrypt device node */
 char *_app2sd_find_associated_dmcrypt_device_node(const char *pkgid, uid_t uid);
 #endif
 

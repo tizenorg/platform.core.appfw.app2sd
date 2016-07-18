@@ -26,12 +26,15 @@
 
 #include "app2sd_internals.h"
 
-static int __app2sd_create_app2sd_directories(uid_t uid)
+static int __app2sd_create_app2sd_directories(uid_t uid, char *mmc_path)
 {
 	int ret = 0;
+	char app2sd_path[FILENAME_MAX] = { 0, };
 	mode_t mode = DIR_PERMS;
 
-	ret = mkdir(APP2SD_PATH, mode);
+	snprintf(app2sd_path, FILENAME_MAX - 1, "%s/%s",
+			mmc_path, EXTIMG_DIR);
+	ret = mkdir(app2sd_path, mode);
 	if (ret) {
 		if (errno != EEXIST) {
 			_E("create directory failed," \
@@ -47,11 +50,13 @@ int app2sd_usr_pre_app_install(const char *pkgid, GList *dir_list, int size, uid
 {
 	int ret = 0;
 	int free_mmc_mem = 0;
+	char *sdpath = NULL;
 	char *device_node = NULL;
 #if !defined(TIZEN_FEATURE_APP2SD_DMCRYPT_ENCRYPTION)
 	char *devi = NULL;
 #endif
 	char *result = NULL;
+	char mmc_path[FILENAME_MAX] = { 0, };
 	char application_path[FILENAME_MAX] = { 0, };
 	char loopback_device[FILENAME_MAX] = { 0, };
 	char *encoded_id = NULL;
@@ -64,17 +69,19 @@ int app2sd_usr_pre_app_install(const char *pkgid, GList *dir_list, int size, uid
 	}
 
 	/* check whether MMC is present or not */
-	ret = _app2sd_check_mmc_status();
+	ret = _app2sd_check_mmc_status(&sdpath);
 	if (ret) {
-		_E("MMC not preset OR Not ready (%d)", ret);
+		_E("MMC not present OR Not ready (%d)", ret);
 		return APP2EXT_ERROR_MMC_STATUS;
 	}
+	snprintf(mmc_path, FILENAME_MAX - 1, "%s", sdpath);
+	free(sdpath);
+	sync();
 
 	/* find available free memory in the MMC card */
-	ret = _app2sd_get_available_free_memory(MMC_PATH, &free_mmc_mem);
+	ret = _app2sd_get_available_free_memory(mmc_path, &free_mmc_mem);
 	if (ret) {
-		_E("unable to get available free memory in MMC (%d)",
-			ret);
+		_E("unable to get available free memory in MMC (%d)", ret);
 		return APP2EXT_ERROR_MMC_STATUS;
 	}
 	_D("size details for application installation:" \
@@ -97,19 +104,19 @@ int app2sd_usr_pre_app_install(const char *pkgid, GList *dir_list, int size, uid
 	if (_is_global(uid)) {
 		snprintf(application_path, FILENAME_MAX - 1, "%s/%s",
 			tzplatform_getenv(TZ_SYS_RW_APP), pkgid);
-		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s",
-			APP2SD_PATH, encoded_id);
+		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s/%s",
+			mmc_path, EXTIMG_DIR, encoded_id);
 	} else {
 		tzplatform_set_user(uid);
 		snprintf(application_path, FILENAME_MAX - 1, "%s/%s",
 			tzplatform_getenv(TZ_USER_APP), pkgid);
-		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s",
-			APP2SD_PATH, encoded_id);
+		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s/%s",
+			mmc_path, EXTIMG_DIR, encoded_id);
 		tzplatform_reset_user();
 	}
 	free(encoded_id);
 
-	ret = __app2sd_create_app2sd_directories(uid);
+	ret = __app2sd_create_app2sd_directories(uid, mmc_path);
 	if (ret) {
 		_E("failed to create app2sd dirs");
 		return ret;
@@ -214,6 +221,7 @@ END:
 	}
 #endif
 
+	sync();
 	return ret;
 }
 
@@ -221,6 +229,8 @@ int app2sd_usr_post_app_install(const char *pkgid,
 		app2ext_status install_status, uid_t uid)
 {
 	char *device_name = NULL;
+	char *sdpath = NULL;
+	char mmc_path[FILENAME_MAX] = { 0, };
 	char application_path[FILENAME_MAX] = { 0, };
 	char application_mmc_path[FILENAME_MAX] = { 0, };
 	char loopback_device[FILENAME_MAX] = { 0, };
@@ -236,11 +246,13 @@ int app2sd_usr_post_app_install(const char *pkgid,
 	}
 
 	/* check whether MMC is present or not */
-	ret = _app2sd_check_mmc_status();
+	ret = _app2sd_check_mmc_status(&sdpath);
 	if (ret) {
 		_E("MMC not present OR Not ready (%d)", ret);
 		return APP2EXT_ERROR_MMC_STATUS;
 	}
+	snprintf(mmc_path, FILENAME_MAX - 1, "%s", sdpath);
+	free(sdpath);
 	sync();
 
 	encoded_id = _app2sd_get_encoded_name(pkgid, uid);
@@ -250,14 +262,14 @@ int app2sd_usr_post_app_install(const char *pkgid,
 	if (_is_global(uid)) {
 		snprintf(application_path, FILENAME_MAX - 1, "%s/%s",
 			tzplatform_getenv(TZ_SYS_RW_APP), pkgid);
-		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s",
-			APP2SD_PATH, encoded_id);
+		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s/%s",
+			mmc_path, EXTIMG_DIR, encoded_id);
 	} else {
 		tzplatform_set_user(uid);
 		snprintf(application_path, FILENAME_MAX - 1, "%s/%s",
 			tzplatform_getenv(TZ_USER_APP), pkgid);
-		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s",
-			APP2SD_PATH, encoded_id);
+		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s/%s",
+			mmc_path, EXTIMG_DIR, encoded_id);
 		tzplatform_reset_user();
 	}
 	free(encoded_id);
@@ -345,14 +357,17 @@ int app2sd_usr_post_app_install(const char *pkgid,
 		}
 	}
 
+	sync();
 	return ret;
 }
 
 int app2sd_usr_on_demand_setup_init(const char *pkgid, uid_t uid)
 {
 	int ret = APP2EXT_SUCCESS;
+	char mmc_path[FILENAME_MAX] = { 0, };
 	char application_path[FILENAME_MAX] = { 0, };
 	char loopback_device[FILENAME_MAX] = { 0, };
+	char *sdpath = NULL;
 	char *encoded_id = NULL;
 	char *device_node = NULL;
 #if !defined(TIZEN_FEATURE_APP2SD_DMCRYPT_ENCRYPTION)
@@ -367,11 +382,13 @@ int app2sd_usr_on_demand_setup_init(const char *pkgid, uid_t uid)
 	}
 
 	/* check whether MMC is present or not */
-	ret = _app2sd_check_mmc_status();
+	ret = _app2sd_check_mmc_status(&sdpath);
 	if (ret) {
-		_E("MMC not preset OR Not ready (%d)", ret);
+		_E("MMC not present OR Not ready (%d)", ret);
 		return APP2EXT_ERROR_MMC_STATUS;
 	}
+	snprintf(mmc_path, FILENAME_MAX - 1, "%s", sdpath);
+	free(sdpath);
 
 	encoded_id = _app2sd_get_encoded_name(pkgid, uid);
 	if (encoded_id == NULL)
@@ -381,14 +398,14 @@ int app2sd_usr_on_demand_setup_init(const char *pkgid, uid_t uid)
 	if (_is_global(uid)) {
 		snprintf(application_path, FILENAME_MAX - 1, "%s/%s",
 			tzplatform_getenv(TZ_SYS_RW_APP), pkgid);
-		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s",
-			APP2SD_PATH, encoded_id);
+		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s/%s",
+			mmc_path, EXTIMG_DIR, encoded_id);
 	} else {
 		tzplatform_set_user(uid);
 		snprintf(application_path, FILENAME_MAX - 1, "%s/%s",
 			tzplatform_getenv(TZ_USER_APP), pkgid);
-		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s",
-			APP2SD_PATH, encoded_id);
+		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s/%s",
+			mmc_path, EXTIMG_DIR, encoded_id);
 		tzplatform_reset_user();
 	}
 	free(encoded_id);
@@ -517,8 +534,10 @@ static int _app2sd_kill_running_app(const char *pkgid, uid_t uid)
 int app2sd_usr_on_demand_setup_exit(const char *pkgid, uid_t uid)
 {
 	int ret = APP2EXT_SUCCESS;
+	char mmc_path[FILENAME_MAX] = { 0, };
 	char application_path[FILENAME_MAX] = { 0, };
 	char loopback_device[FILENAME_MAX] = { 0, };
+	char *sdpath = NULL;
 	char *encoded_id = NULL;
 	FILE *fp = NULL;
 	int mmc_present = 1;
@@ -532,11 +551,13 @@ int app2sd_usr_on_demand_setup_exit(const char *pkgid, uid_t uid)
 	_app2sd_kill_running_app(pkgid, uid);
 
 	/* check whether MMC is present or not */
-	ret = _app2sd_check_mmc_status();
+	ret = _app2sd_check_mmc_status(&sdpath);
 	if (ret) {
-		_W("MMC not preset OR Not ready (%d)", ret);
+		_W("MMC not present OR Not ready (%d)", ret);
 		mmc_present = 0;
 	}
+	snprintf(mmc_path, FILENAME_MAX - 1, "%s", sdpath);
+	free(sdpath);
 
 	encoded_id = _app2sd_get_encoded_name(pkgid, uid);
 	if (encoded_id == NULL)
@@ -546,14 +567,14 @@ int app2sd_usr_on_demand_setup_exit(const char *pkgid, uid_t uid)
 	if (_is_global(uid)) {
 		snprintf(application_path, FILENAME_MAX - 1, "%s/%s",
 			tzplatform_getenv(TZ_SYS_RW_APP), pkgid);
-		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s",
-			APP2SD_PATH, encoded_id);
+		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s/%s",
+			mmc_path, EXTIMG_DIR, encoded_id);
 	} else {
 		tzplatform_set_user(uid);
 		snprintf(application_path, FILENAME_MAX - 1, "%s/%s",
 			tzplatform_getenv(TZ_USER_APP), pkgid);
-		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s",
-			APP2SD_PATH, encoded_id);
+		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s/%s",
+			mmc_path, EXTIMG_DIR, encoded_id);
 		tzplatform_reset_user();
 	}
 	free(encoded_id);
@@ -591,8 +612,10 @@ int app2sd_usr_on_demand_setup_exit(const char *pkgid, uid_t uid)
 int app2sd_usr_pre_app_uninstall(const char *pkgid, uid_t uid)
 {
 	int ret = APP2EXT_SUCCESS;
+	char mmc_path[FILENAME_MAX] = { 0, };
 	char application_path[FILENAME_MAX] = { 0, };
 	char loopback_device[FILENAME_MAX] = { 0, };
+	char *sdpath = NULL;
 	char *encoded_id = NULL;
 	char *device_node = NULL;
 	FILE *fp = NULL;
@@ -605,12 +628,15 @@ int app2sd_usr_pre_app_uninstall(const char *pkgid, uid_t uid)
 	}
 
 	/* check whether MMC is present or not */
-	ret = _app2sd_check_mmc_status();
+	ret = _app2sd_check_mmc_status(&sdpath);
 	if (ret) {
-		_E("MMC not preset OR Not ready (%d)", ret);
+		_E("MMC not present OR Not ready (%d)", ret);
 		ret = APP2EXT_ERROR_MMC_STATUS;
 		goto END;
 	}
+	snprintf(mmc_path, FILENAME_MAX - 1, "%s", sdpath);
+	free(sdpath);
+	sync();
 
 	encoded_id = _app2sd_get_encoded_name(pkgid, uid);
 	if (encoded_id == NULL)
@@ -619,14 +645,14 @@ int app2sd_usr_pre_app_uninstall(const char *pkgid, uid_t uid)
 	if (_is_global(uid)) {
 		snprintf(application_path, FILENAME_MAX - 1, "%s/%s",
 			tzplatform_getenv(TZ_SYS_RW_APP), pkgid);
-		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s",
-			APP2SD_PATH, encoded_id);
+		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s/%s",
+			mmc_path, EXTIMG_DIR, encoded_id);
 	} else {
 		tzplatform_set_user(uid);
 		snprintf(application_path, FILENAME_MAX - 1, "%s/%s",
 			tzplatform_getenv(TZ_USER_APP), pkgid);
-		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s",
-			APP2SD_PATH, encoded_id);
+		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s/%s",
+			mmc_path, EXTIMG_DIR, encoded_id);
 		tzplatform_reset_user();
 	}
 	free(encoded_id);
@@ -699,14 +725,17 @@ int app2sd_usr_pre_app_uninstall(const char *pkgid, uid_t uid)
 	}
 
 END:
+	sync();
 	return ret;
 }
 
 int app2sd_usr_post_app_uninstall(const char *pkgid, uid_t uid)
 {
+	char mmc_path[FILENAME_MAX] = { 0, };
 	char application_path[FILENAME_MAX] = { 0, };
 	char application_mmc_path[FILENAME_MAX] = { 0, };
 	char loopback_device[FILENAME_MAX] = { 0, };
+	char *sdpath = NULL;
 	char *encoded_id = NULL;
 	int ret = APP2EXT_SUCCESS;
 
@@ -718,12 +747,15 @@ int app2sd_usr_post_app_uninstall(const char *pkgid, uid_t uid)
 	}
 
 	/* check whether MMC is present or not */
-	ret = _app2sd_check_mmc_status();
+	ret = _app2sd_check_mmc_status(&sdpath);
 	if (ret) {
-		_E("MMC not preset OR Not ready (%d)", ret);
+		_E("MMC not present OR Not ready (%d)", ret);
 		ret = APP2EXT_ERROR_MMC_STATUS;
 		goto END;
 	}
+	snprintf(mmc_path, FILENAME_MAX - 1, "%s", sdpath);
+	free(sdpath);
+	sync();
 
 	encoded_id = _app2sd_get_encoded_name(pkgid, uid);
 	if (encoded_id == NULL)
@@ -732,14 +764,14 @@ int app2sd_usr_post_app_uninstall(const char *pkgid, uid_t uid)
 	if (_is_global(uid)) {
 		snprintf(application_path, FILENAME_MAX - 1, "%s/%s",
 			tzplatform_getenv(TZ_SYS_RW_APP), pkgid);
-		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s",
-			APP2SD_PATH, encoded_id);
+		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s/%s",
+			mmc_path, EXTIMG_DIR, encoded_id);
 	} else {
 		tzplatform_set_user(uid);
 		snprintf(application_path, FILENAME_MAX - 1, "%s/%s",
 			tzplatform_getenv(TZ_USER_APP), pkgid);
-		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s",
-			APP2SD_PATH, encoded_id);
+		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s/%s",
+			mmc_path, EXTIMG_DIR, encoded_id);
 		tzplatform_reset_user();
 	}
 	free(encoded_id);
@@ -804,6 +836,7 @@ int app2sd_usr_post_app_uninstall(const char *pkgid, uid_t uid)
 	}
 
 END:
+	sync();
 	return ret;
 }
 
@@ -812,6 +845,8 @@ int app2sd_usr_pre_move_installed_app(const char *pkgid,
 {
 	int ret = 0;
 	int pkgmgr_ret = 0;
+	char *sdpath = NULL;
+	char mmc_path[FILENAME_MAX] = { 0, };
 
 	/* validate function arguments */
 	if (pkgid == NULL || dir_list == NULL
@@ -821,13 +856,23 @@ int app2sd_usr_pre_move_installed_app(const char *pkgid,
 		return APP2EXT_ERROR_INVALID_ARGUMENTS;
 	}
 
-	ret = __app2sd_create_app2sd_directories(uid);
+	/* check whether MMC is present or not */
+	ret = _app2sd_check_mmc_status(&sdpath);
+	if (ret) {
+		_E("MMC not present OR Not ready(%d)", ret);
+		return APP2EXT_ERROR_MMC_STATUS;
+	}
+	snprintf(mmc_path, FILENAME_MAX - 1, "%s", sdpath);
+	free(sdpath);
+	sync();
+
+	ret = __app2sd_create_app2sd_directories(uid, mmc_path);
 	if (ret) {
 		_E("failed to create app2sd dirs");
 		return ret;
 	}
 
-	ret = _app2sd_usr_move_app(pkgid, move_type, dir_list, uid);
+	ret = _app2sd_usr_move_app(pkgid, move_type, dir_list, uid, mmc_path);
 	if (ret) {
 		_D("unable to move application");
 		return ret;
@@ -862,8 +907,10 @@ int app2sd_usr_post_move_installed_app(const char *pkgid,
 		app2ext_move_type move_type, uid_t uid)
 {
 	int ret = 0;
+	char mmc_path[FILENAME_MAX] = { 0, };
 	char application_path[FILENAME_MAX] = { 0, };
 	char loopback_device[FILENAME_MAX] = { 0, };
+	char *sdpath = NULL;
 	char *encoded_id = NULL;
 
 	/* validate function arguments */
@@ -877,18 +924,21 @@ int app2sd_usr_post_move_installed_app(const char *pkgid,
 		return APP2EXT_SUCCESS;
 
 	/* check whether MMC is present or not */
-	ret = _app2sd_check_mmc_status();
+	ret = _app2sd_check_mmc_status(&sdpath);
 	if (ret) {
-		_E("MMC not preset OR Not ready(%d)", ret);
+		_E("MMC not present OR Not ready(%d)", ret);
 		return APP2EXT_ERROR_MMC_STATUS;
 	}
+	snprintf(mmc_path, FILENAME_MAX - 1, "%s", sdpath);
+	free(sdpath);
+	sync();
 
 	encoded_id = _app2sd_get_encoded_name(pkgid, uid);
 	if (encoded_id == NULL)
 		return APP2EXT_ERROR_MEMORY_ALLOC_FAILED;
 
-	snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s",
-			APP2SD_PATH, encoded_id);
+	snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s/%s",
+			mmc_path, EXTIMG_DIR, encoded_id);
 	free(encoded_id);
 	if (_is_global(uid)) {
 		snprintf(application_path, FILENAME_MAX - 1, "%s/%s",
@@ -923,9 +973,11 @@ int app2sd_usr_pre_app_upgrade(const char *pkgid, GList *dir_list,
 		int size, uid_t uid)
 {
 	int ret = APP2EXT_SUCCESS;
+	char app2sd_path[FILENAME_MAX] = { 0, };
 	char loopback_device[FILENAME_MAX] = { 0, };
 	char application_path[FILENAME_MAX] = { 0, };
 	char temp_uid[32] = { 0, };
+	char *sdpath = NULL;
 	char *temp_pkgid = NULL;
 	char *temp_loopback_device = NULL;
 	char *temp_application_path = NULL;
@@ -944,11 +996,15 @@ int app2sd_usr_pre_app_upgrade(const char *pkgid, GList *dir_list,
 	}
 
 	/* check whether MMC is present or not */
-	ret = _app2sd_check_mmc_status();
+	ret = _app2sd_check_mmc_status(&sdpath);
 	if (ret) {
-		_E("MMC not preset OR Not ready (%d)", ret);
+		_E("MMC not present OR Not ready (%d)", ret);
 		return APP2EXT_ERROR_MMC_STATUS;
 	}
+	snprintf(app2sd_path, FILENAME_MAX - 1, "%s/%s",
+			sdpath, EXTIMG_DIR);
+	free(sdpath);
+	sync();
 
 	encoded_id = _app2sd_get_encoded_name(pkgid, uid);
 	if (encoded_id == NULL)
@@ -958,13 +1014,13 @@ int app2sd_usr_pre_app_upgrade(const char *pkgid, GList *dir_list,
 		snprintf(application_path, FILENAME_MAX - 1, "%s/%s",
 			tzplatform_getenv(TZ_SYS_RW_APP), pkgid);
 		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s",
-			APP2SD_PATH, encoded_id);
+			app2sd_path, encoded_id);
 	} else {
 		tzplatform_set_user(uid);
 		snprintf(application_path, FILENAME_MAX - 1, "%s/%s",
 			tzplatform_getenv(TZ_USER_APP), pkgid);
 		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s",
-			APP2SD_PATH, encoded_id);
+			app2sd_path, encoded_id);
 		tzplatform_reset_user();
 	}
 	free(encoded_id);
@@ -1010,7 +1066,7 @@ int app2sd_usr_pre_app_upgrade(const char *pkgid, GList *dir_list,
 				free(temp_application_path);
 				return APP2EXT_ERROR_MEMORY_ALLOC_FAILED;
 			}
-			len = strlen(APP2SD_PATH) + strlen(temp_encoded_id) + 1;
+			len = strlen(app2sd_path) + strlen(temp_encoded_id) + 1;
 			temp_loopback_device = calloc(len + 1, sizeof(char));
 			if (temp_loopback_device == NULL) {
 				_E("memory alloc failed");
@@ -1020,7 +1076,7 @@ int app2sd_usr_pre_app_upgrade(const char *pkgid, GList *dir_list,
 				return APP2EXT_ERROR_MEMORY_ALLOC_FAILED;
 			}
 			snprintf(temp_loopback_device, len + 1, "%s/%s",
-				APP2SD_PATH, temp_encoded_id);
+				app2sd_path, temp_encoded_id);
 			free(temp_encoded_id);
 		} else {
 			tzplatform_set_user(uid);
@@ -1041,7 +1097,7 @@ int app2sd_usr_pre_app_upgrade(const char *pkgid, GList *dir_list,
 				return APP2EXT_ERROR_MEMORY_ALLOC_FAILED;
 			}
 			snprintf(temp_uid, 32, "%d", uid);
-			len = strlen(APP2SD_PATH) + strlen(temp_uid) + strlen(temp_encoded_id) + 2;
+			len = strlen(app2sd_path) + strlen(temp_uid) + strlen(temp_encoded_id) + 2;
 			temp_loopback_device = calloc(len + 1, sizeof(char));
 			if (temp_loopback_device == NULL) {
 				_E("memory alloc failed");
@@ -1051,7 +1107,7 @@ int app2sd_usr_pre_app_upgrade(const char *pkgid, GList *dir_list,
 				return APP2EXT_ERROR_MEMORY_ALLOC_FAILED;
 			}
 			snprintf(temp_loopback_device, len + 1, "%s/%s",
-				APP2SD_PATH, temp_encoded_id);
+				app2sd_path, temp_encoded_id);
 			free(temp_encoded_id);
 			tzplatform_reset_user();
 		}
@@ -1124,15 +1180,19 @@ int app2sd_usr_pre_app_upgrade(const char *pkgid, GList *dir_list,
 		free(device_node);
 		device_node = NULL;
 	}
+
+	sync();
 	return ret;
 }
 
 int app2sd_usr_post_app_upgrade(const char *pkgid,
 		app2ext_status install_status, uid_t uid)
 {
-	char *device_name = NULL;
+	char mmc_path[FILENAME_MAX] = { 0, };
 	char loopback_device[FILENAME_MAX] = { 0, };
 	char application_path[FILENAME_MAX] = { 0, };
+	char *sdpath = NULL;
+	char *device_name = NULL;
 	char *encoded_id = NULL;
 	int ret = APP2EXT_SUCCESS;
 
@@ -1144,11 +1204,14 @@ int app2sd_usr_post_app_upgrade(const char *pkgid,
 	}
 
 	/* check whether MMC is present or not */
-	ret = _app2sd_check_mmc_status();
+	ret = _app2sd_check_mmc_status(&sdpath);
 	if (ret) {
-		_E("MMC not preset OR Not ready (%d)", ret);
+		_E("MMC not present OR Not ready (%d)", ret);
 		return APP2EXT_ERROR_MMC_STATUS;
 	}
+	snprintf(mmc_path, FILENAME_MAX - 1, "%s", sdpath);
+	free(sdpath);
+	sync();
 
 	encoded_id = _app2sd_get_encoded_name(pkgid, uid);
 	if (encoded_id == NULL)
@@ -1157,14 +1220,14 @@ int app2sd_usr_post_app_upgrade(const char *pkgid,
 	if (_is_global(uid)) {
 		snprintf(application_path, FILENAME_MAX - 1, "%s/%s",
 			tzplatform_getenv(TZ_SYS_RW_APP), pkgid);
-		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s",
-			APP2SD_PATH, encoded_id);
+		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s/%s",
+			mmc_path, EXTIMG_DIR, encoded_id);
 	} else {
 		tzplatform_set_user(uid);
 		snprintf(application_path, FILENAME_MAX - 1, "%s/%s",
 			tzplatform_getenv(TZ_USER_APP), pkgid);
-		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s",
-			APP2SD_PATH, encoded_id);
+		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s/%s",
+			mmc_path, EXTIMG_DIR, encoded_id);
 		tzplatform_reset_user();
 	}
 	free(encoded_id);
@@ -1222,13 +1285,16 @@ int app2sd_usr_post_app_upgrade(const char *pkgid,
 		device_name = NULL;
 	}
 
+	sync();
 	return ret;
 }
 
 int app2sd_usr_force_clean(const char *pkgid, uid_t uid)
 {
+	char mmc_path[FILENAME_MAX] = { 0, };
 	char loopback_device[FILENAME_MAX] = { 0, };
 	char application_path[FILENAME_MAX] = { 0, };
+	char *sdpath = NULL;
 	char *encoded_id = NULL;
 	int ret = APP2EXT_SUCCESS;
 
@@ -1238,6 +1304,14 @@ int app2sd_usr_force_clean(const char *pkgid, uid_t uid)
 		return APP2EXT_ERROR_INVALID_ARGUMENTS;
 	}
 
+	/* check whether MMC is present or not */
+	ret = _app2sd_check_mmc_status(&sdpath);
+	if (ret) {
+		_E("MMC not present OR Not ready (%d)", ret);
+		return APP2EXT_ERROR_MMC_STATUS;
+	}
+	snprintf(mmc_path, FILENAME_MAX - 1, "%s", sdpath);
+	free(sdpath);
 	sync();
 
 	encoded_id = _app2sd_get_encoded_name(pkgid, uid);
@@ -1247,20 +1321,21 @@ int app2sd_usr_force_clean(const char *pkgid, uid_t uid)
 	if (_is_global(uid)) {
 		snprintf(application_path, FILENAME_MAX - 1, "%s/%s",
 			tzplatform_getenv(TZ_SYS_RW_APP), pkgid);
-		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s",
-			APP2SD_PATH, encoded_id);
+		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s/%s",
+			mmc_path, EXTIMG_DIR, encoded_id);
 	} else {
 		tzplatform_set_user(uid);
 		snprintf(application_path, FILENAME_MAX - 1, "%s/%s",
 			tzplatform_getenv(TZ_USER_APP), pkgid);
-		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s",
-			APP2SD_PATH, encoded_id);
+		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s/%s",
+			mmc_path, EXTIMG_DIR, encoded_id);
 		tzplatform_reset_user();
 	}
 	free(encoded_id);
 
 	ret = _app2sd_force_clean(pkgid, application_path, loopback_device, uid);
 
+	sync();
 	return ret;
 }
 
@@ -1269,14 +1344,26 @@ int app2sd_enable_full_pkg(void)
 	int ret = APP2EXT_SUCCESS;
 	int rc = 0;
 	char buf[FILENAME_MAX] = { 0, };
+	char app2sd_path[FILENAME_MAX] = { 0, };
 	char loopback_device[FILENAME_MAX] = { 0, };
+	char *sdpath = NULL;
+	char *pkgid = NULL;
 	DIR *dir = NULL;
 	struct dirent entry;
 	struct dirent *result = NULL;
-	char *pkgid = NULL;
 	uid_t uid = 0;
 
-	dir = opendir(APP2SD_PATH);
+	/* check whether MMC is present or not */
+	ret = _app2sd_check_mmc_status(&sdpath);
+	if (ret) {
+		_E("MMC not present OR Not ready (%d)", ret);
+		return APP2EXT_ERROR_MMC_STATUS;
+	}
+	snprintf(app2sd_path, FILENAME_MAX - 1, "%s/%s",
+			sdpath, EXTIMG_DIR);
+	free(sdpath);
+
+	dir = opendir(app2sd_path);
 	if (!dir) {
 		strerror_r(errno, buf, sizeof(buf));
 		_E("failed to opendir (%s)", buf);
@@ -1297,7 +1384,7 @@ int app2sd_enable_full_pkg(void)
 			strcmp(entry.d_name, "..") == 0)
 			continue;
 		snprintf(loopback_device, FILENAME_MAX - 1, "%s/%s",
-			APP2SD_PATH, entry.d_name);
+			app2sd_path, entry.d_name);
 		ret = _app2sd_get_info_from_db(loopback_device,
 			&pkgid, &uid);
 		if (ret) {
@@ -1322,6 +1409,7 @@ int app2sd_enable_full_pkg(void)
 	}
 	closedir(dir);
 
+	sync();
 	return ret;
 }
 
@@ -1353,5 +1441,6 @@ int app2sd_disable_full_pkg(void)
 	if (ret)
 		_E("disable full pkg error(%d)", ret);
 
+	sync();
 	return ret;
 }
