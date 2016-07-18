@@ -75,32 +75,36 @@ int _xsystem(const char *argv[])
 
 
 /*
- * @_app2sd_check_mmc_status
  * This function checks and returns MMC status
  */
-/* TODO : another possible way ? */
-int _app2sd_check_mmc_status(void)
+int _app2sd_check_mmc_status(char **sdpath)
 {
-	FILE *fp1 = NULL;
-	char line[512];
-	fp1 = fopen("/etc/mtab", "r");
-	if (fp1 == NULL) {
-		fprintf(stderr, "failed to open file\n");
-		_E("failed to open file /etc/mtab");
+	int ret = 0;
+	int storage_id = 0;
+	char *sd_mount_path = NULL;
+
+	ret = storage_get_primary_sdcard(&storage_id, &sd_mount_path);
+	if (ret != STORAGE_ERROR_NONE) {
+		_E("failed to get primary sdcard (%d)", ret);
+		if (sd_mount_path)
+			free(sd_mount_path);
 		return APP2EXT_ERROR_MMC_STATUS;
 	}
-	while (fgets(line, 512, fp1) != NULL) {
-		if (strstr(line, MMC_PATH) != NULL) {
-			fclose(fp1);
-			return APP2EXT_SUCCESS;
-		}
+	if (sd_mount_path) {
+		_D("primary sdcard: id(%d), mount_path(%s)",
+			storage_id, sd_mount_path);
+		*sdpath = sd_mount_path;
+		return APP2EXT_SUCCESS;
 	}
-	fclose(fp1);
+
+	_E("there is no primary sdcard");
+	if (sd_mount_path)
+		free(sd_mount_path);
+
 	return APP2EXT_ERROR_MMC_STATUS;
 }
 
 /*
- * @_app2sd_get_available_free_memory
  * This function returns the available free memory in the SD Card.
  * param [in]: sd_path: This is sd card access path.
  * param [out]: free_mem: Result will be available in this.
@@ -108,20 +112,20 @@ int _app2sd_check_mmc_status(void)
  * return: On success, it will return 0.
  * Else, appropriate error no will be returned.
  */
-int _app2sd_get_available_free_memory(const char *sd_path, int *free_mem)
+int _app2sd_get_available_free_memory(char *mmc_path, int *free_mem)
 {
 	struct statvfs buf;
 	int ret = 0;
 	unsigned long long temp = 0;
 
-	if (sd_path == NULL || free_mem == NULL) {
+	if (mmc_path == NULL || free_mem == NULL) {
 		_E("invalid input parameter");
 		return -1;
 	}
 
 	memset((void *)&buf, '\0', sizeof(struct statvfs));
 
-	ret = statvfs(sd_path, &buf);
+	ret = statvfs(mmc_path, &buf);
 	if (ret) {
 		_E("unable to get SD Card memory information");
 		return APP2EXT_ERROR_MMC_INFORMATION;
