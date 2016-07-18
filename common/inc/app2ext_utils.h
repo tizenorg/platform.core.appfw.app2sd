@@ -53,8 +53,7 @@ extern "C" {
 #define OWNER_ROOT 0
 #define REGULAR_USER 5000
 #define GLOBAL_USER tzplatform_getuid(TZ_SYS_GLOBALAPP_USER)
-#define MMC_PATH tzplatform_mkpath(TZ_SYS_MEDIA, "SDCardA1")
-#define APP2SD_PATH tzplatform_mkpath(TZ_SYS_MEDIA, "SDCardA1/app2sd")
+#define EXTIMG_DIR "app2sd"
 
 #define APP2SD_BUS_NAME "org.tizen.app2sd"
 #define APP2SD_OBJECT_PATH "/org/tizen/app2sd"
