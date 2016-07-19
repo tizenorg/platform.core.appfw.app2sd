@@ -130,11 +130,8 @@ static void usage(void)
 	printf("------------------------------------------------\n");
 	printf("\n");
 	printf("<MOVE PKG TEST>\n");
-	printf("(at target_user)$test_app2ext --move\n");
-	printf("------------------------------------------------\n");
-	printf("\n");
-	printf("<GET INSTALLED LOCATION (Ext/Internal)>\n");
-	printf("(at target_user)$test_app2ext --getlocation\n");
+	printf("(at target_user)$test_app2ext --move-to-ext\n");
+	printf("(at target_user)$test_app2ext --move-to-int\n");
 	printf("------------------------------------------------\n");
 	printf("\n");
 	printf("<ENABLE(mount)/DISABLE(umount) TEST W/ Installed PKG>\n");
@@ -153,8 +150,8 @@ static void usage(void)
 #define OPTVAL_POST_UNINSTALL		1003
 #define OPTVAL_PRE_UPGRADE		1004
 #define OPTVAL_POST_UPGRADE		1005
-#define OPTVAL_MOVE			1006
-#define OPTVAL_GET_LOCATION		1007
+#define OPTVAL_MOVE_TO_EXTERNAL		1006
+#define OPTVAL_MOVE_TO_INTERNAL		1007
 #define OPTVAL_ENABLE_APP		1008
 #define OPTVAL_DISABLE_APP		1009
 #define OPTVAL_ENABLE_FULL		1010
@@ -169,8 +166,8 @@ const struct option long_opts[] = {
 	{ "post-uninstall", 0, NULL, OPTVAL_POST_UNINSTALL },
 	{ "pre-upgrade", 0, NULL, OPTVAL_PRE_UPGRADE },
 	{ "post-upgrade", 0, NULL, OPTVAL_POST_UPGRADE },
-	{ "move", 0, NULL, OPTVAL_MOVE },
-	{ "getlocation", 0, NULL, OPTVAL_GET_LOCATION },
+	{ "move-to-ext", 0, NULL, OPTVAL_MOVE_TO_EXTERNAL },
+	{ "move-to-int", 0, NULL, OPTVAL_MOVE_TO_INTERNAL },
 	{ "enable", 0, NULL, OPTVAL_ENABLE_APP },
 	{ "disable", 0, NULL, OPTVAL_DISABLE_APP },
 	{ "enable-full", 0, NULL, OPTVAL_ENABLE_FULL },
@@ -451,13 +448,12 @@ static int post_app_upgrade()
 	return ret;
 }
 
-static int app_move()
+static int app_move_to_external()
 {
 	GList *dir_list = NULL;
 	int ret = -1;
-	int ret_check = -1;
 
-	printf("app_move  %s\n", TEST_PKGNAME);
+	printf("app_move_to_external  %s\n", TEST_PKGNAME);
 
 	dir_list = populate_dir_details();
 	if (dir_list == NULL) {
@@ -465,54 +461,43 @@ static int app_move()
 		return -1;
 	}
 
-	ret = app2ext_usr_get_app_location(TEST_PKGNAME, getuid());
-	printf("return value = (%d)\n", ret);
-	if (ret == APP2EXT_SD_CARD) {
-		printf("pkg %s is in sd card\n", TEST_PKGNAME);
-		printf("pkg %s will be moved to internal memory\n", TEST_PKGNAME);
-		ret = handle->interface.client_pre_move(TEST_PKGNAME,
-			dir_list, APP2EXT_MOVE_TO_PHONE);
-		print_error_code(__func__, ret);
-		ret = handle->interface.client_post_move(TEST_PKGNAME,
-			APP2EXT_MOVE_TO_PHONE);
-		print_error_code(__func__, ret);
-		ret_check = app2ext_usr_get_app_location(TEST_PKGNAME, getuid());
-		if (ret_check == APP2EXT_INTERNAL_MEM)
-			printf("pkg %s is moved to internal memory\n", TEST_PKGNAME);
-	} else if (ret == APP2EXT_INTERNAL_MEM) {
-		printf("pkg %s is in internal memory\n", TEST_PKGNAME);
-		printf("pkg %s will be moved to sd card\n", TEST_PKGNAME);
-		ret = handle->interface.client_pre_move(TEST_PKGNAME,
-			dir_list, APP2EXT_MOVE_TO_EXT);
-		print_error_code(__func__, ret);
-		ret = handle->interface.client_post_move(TEST_PKGNAME,
-			APP2EXT_MOVE_TO_EXT);
-		print_error_code(__func__, ret);
-		ret_check = app2ext_usr_get_app_location(TEST_PKGNAME, getuid());
-		if (ret_check == APP2EXT_SD_CARD)
-			printf("pkg %s is moved to sd card\n", TEST_PKGNAME);
-	}  else {
-		ret = APP2EXT_ERROR_INVALID_PACKAGE;
-		printf("app_move failed (%s)\n", error_list[ret]);
-	}
+	printf("pkg %s will be moved to sd card\n", TEST_PKGNAME);
+	ret = handle->interface.client_pre_move(TEST_PKGNAME,
+		dir_list, APP2EXT_MOVE_TO_EXT);
+	print_error_code(__func__, ret);
+	ret = handle->interface.client_post_move(TEST_PKGNAME,
+		APP2EXT_MOVE_TO_EXT);
+	print_error_code(__func__, ret);
 
 	clear_dir_list(dir_list);
 
 	return ret;
 }
 
-static void app_get_location()
+static int app_move_to_internal()
 {
-	printf("app_get_location for pkg(%s)\n", TEST_PKGNAME);
+	GList *dir_list = NULL;
 	int ret = -1;
 
-	ret = app2ext_usr_get_app_location(TEST_PKGNAME, getuid());
-	if (ret == APP2EXT_SD_CARD)
-		printf("pkg is in sd card\n");
-	 else if (ret == APP2EXT_INTERNAL_MEM)
-		printf("pkg is in internal memory\n");
-	 else
-		printf("pkg is not installed\n");
+	printf("app_move_to_internal  %s\n", TEST_PKGNAME);
+
+	dir_list = populate_dir_details();
+	if (dir_list == NULL) {
+		printf("Error in populating the directory list\n");
+		return -1;
+	}
+
+	printf("pkg %s will be moved to internal memory\n", TEST_PKGNAME);
+	ret = handle->interface.client_pre_move(TEST_PKGNAME,
+		dir_list, APP2EXT_MOVE_TO_PHONE);
+	print_error_code(__func__, ret);
+	ret = handle->interface.client_post_move(TEST_PKGNAME,
+		APP2EXT_MOVE_TO_PHONE);
+	print_error_code(__func__, ret);
+
+	clear_dir_list(dir_list);
+
+	return ret;
 }
 
 int main(int argc, char **argv)
@@ -584,11 +569,11 @@ int main(int argc, char **argv)
 		case OPTVAL_POST_UPGRADE:
 			post_app_upgrade();
 			break;
-		case OPTVAL_MOVE:
-			app_move();
+		case OPTVAL_MOVE_TO_EXTERNAL:
+			app_move_to_external();
 			break;
-		case OPTVAL_GET_LOCATION:
-			app_get_location();
+		case OPTVAL_MOVE_TO_INTERNAL:
+			app_move_to_internal();
 			break;
 		case OPTVAL_ENABLE_APP:
 			app_enable();
