@@ -403,20 +403,6 @@ API app2ext_handle *app2ext_init(int storage_type);
 API int app2ext_deinit(app2ext_handle *handle);
 
 /**
- * @brief : This API returns the application location by refering to package manager DB
- *         This should be called to know location of an application package
- * @param[in] pkgid     package id
- * @param[in] uid       target user id of this instruction
- * @return      APP2EXT_SD_CARD if pkg is in SD card,
- *              APP2EXT_INTERNAL_MEM if pkg is in internal memory,
- *              APP2EXT_NOT_INSTALLED if there is no valid pkg path
- *              error < 0 if fail
- *@remarks see app2ext_install_location for more details
- */
-API int app2ext_get_app_location(const char *pkgid);
-API int app2ext_usr_get_app_location(const char *pkgid, uid_t uid);
-
-/**
  * @brief : This API enable the package which is located in external memory
  * @param[in] pkgid     package id
  * @param[in] uid       target user id of this instruction
