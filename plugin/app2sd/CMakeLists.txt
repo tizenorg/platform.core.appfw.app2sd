@@ -1,5 +1,5 @@
 # Required packages
-pkg_check_modules(app2sd_pkgs REQUIRED dlog pkgmgr-info gio-2.0 glib-2.0 db-util libtzplatform-config aul storage)
+pkg_check_modules(app2sd_pkgs REQUIRED dlog pkgmgr-info gio-2.0 glib-2.0 db-util libtzplatform-config aul storage security-manager)
 pkg_check_modules(app2sd_libpkgs REQUIRED dlog pkgmgr-info gio-2.0 glib-2.0)
 
 # Compiler flags

@@ -3,6 +3,6 @@
 		<domain name="_"/>
 	</request>
 	<assign>
-		<filesystem path="/usr/bin/app2sd-server" exec_label="User"/>
+		<filesystem path="/usr/bin/app2sd-server" exec_label="none"/>
 	</assign>
 </manifest>
