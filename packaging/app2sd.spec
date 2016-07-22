@@ -17,6 +17,7 @@ BuildRequires:  pkgconfig(gio-2.0)
 BuildRequires:  pkgconfig(glib-2.0)
 BuildRequires:  pkgconfig(aul)
 BuildRequires:  pkgconfig(storage)
+BuildRequires:  pkgconfig(security-manager)
 BuildRequires:  cmake
 
 %description
