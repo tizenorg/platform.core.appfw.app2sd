@@ -44,7 +44,7 @@ static int _app2sd_make_directory(const char *path, uid_t uid)
 
 	ret = _app2sd_delete_directory(path);
 	if (ret) {
-		_E("unable to delete (%s)", path);
+		_E("unable to delete (%s), errno(%d)", path, errno);
 		return APP2EXT_ERROR_DELETE_DIRECTORY;
 	}
 
@@ -795,13 +795,16 @@ int _app2sd_mount_app_content(const char *application_path, const char *pkgid,
 			pkgid, dir_list, uid);
 	}
 
-	/* change lost+found permission */
-	snprintf(temp_path, FILENAME_MAX - 1, "%s/lost+found",
-			application_mmc_path);
-	ret = _app2sd_make_directory(temp_path, uid);
-	if (ret) {
-		_E("create directory(%s) failed", temp_path);
-		return APP2EXT_ERROR_CREATE_DIRECTORY;
+	if (mount_type != MOUNT_TYPE_RD &&
+		mount_type != MOUNT_TYPE_RD_REMOUNT) {
+		/* change lost+found permission */
+		snprintf(temp_path, FILENAME_MAX - 1, "%s/lost+found",
+				application_mmc_path);
+		ret = _app2sd_make_directory(temp_path, uid);
+		if (ret) {
+			_E("create directory(%s) failed", temp_path);
+			return APP2EXT_ERROR_CREATE_DIRECTORY;
+		}
 	}
 
 	return ret;
