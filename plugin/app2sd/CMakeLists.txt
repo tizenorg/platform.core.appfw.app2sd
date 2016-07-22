@@ -29,7 +29,8 @@ SET(app2sd_src_dir "${app2sd_dir}/src")
 ## build app2sd library
 SET(APP2SD "app2sd")
 SET(libapp2sd_SOURCES
-	${app2sd_src_dir}/app2sd_client_interface.c)
+	${app2sd_src_dir}/app2sd_client_interface.c
+	${CMAKE_SOURCE_DIR}/common/src/app2ext_utils.c)
 SET(libapp2sd_LDFLAGS " -L${LIB_INSTALL_DIR} -lcrypto -module -avoid-version ")
 SET(libapp2sd_CFLAGS  " ${CFLAGS} -fPIC ")
 
