@@ -25,6 +25,7 @@
 #include <openssl/sha.h>
 #include <time.h>
 #include <pwd.h>
+#include <security-manager.h>
 
 #include "app2sd_internals.h"
 
@@ -32,6 +33,98 @@
 #define DMCRYPT_ITER_TIME	50
 #define DMCRYPT_KEY_LEN		128
 #endif
+
+static int _app2sd_setlabel_directory_entry(const char *application_path,
+		const char *pkgid, GList *dir_list, uid_t uid)
+{
+	path_req* req;
+	app_install_type type = SM_APP_INSTALL_NONE;
+	GList *list = NULL;
+	app2ext_dir_details *dir_detail = NULL;
+	char temp_path[FILENAME_MAX] = { 0, };
+	int ret = 0;
+
+	ret = security_manager_path_req_new(&req);
+	if (ret != SECURITY_MANAGER_SUCCESS) {
+		_E("failed to set path request (%d)", ret);
+		goto FAIL;
+	}
+
+	ret = security_manager_path_req_set_pkg_id(req, pkgid);
+	if (ret != SECURITY_MANAGER_SUCCESS) {
+		_E("failed to set pkgid (%d)", ret);
+		goto FAIL;
+	}
+
+	ret = security_manager_path_req_set_uid(req, uid);
+	if (ret != SECURITY_MANAGER_SUCCESS) {
+		_E("failed to set uid (%d)", ret);
+		goto FAIL;
+	}
+
+	if (uid == 0)
+		type = SM_APP_INSTALL_PRELOADED;
+	else if (uid == GLOBAL_USER)
+		type = SM_APP_INSTALL_GLOBAL;
+	else
+		type = SM_APP_INSTALL_LOCAL;
+
+	ret = security_manager_path_req_set_install_type(req,
+		type);
+	if (ret != SECURITY_MANAGER_SUCCESS) {
+		_E("failed to set intall type (%d)", ret);
+		goto FAIL;
+	}
+
+	snprintf(temp_path, FILENAME_MAX, "%s/.mmc",
+		application_path);
+	ret = security_manager_path_req_add_path(req, temp_path,
+		SECURITY_MANAGER_PATH_RO);
+	if (ret != SECURITY_MANAGER_SUCCESS) {
+		_E("failed to add path(%s), (%d)", temp_path, ret);
+		goto FAIL;
+	}
+
+	snprintf(temp_path, FILENAME_MAX, "%s/.mmc/lost+found",
+		application_path);
+	ret = security_manager_path_req_add_path(req, temp_path,
+		SECURITY_MANAGER_PATH_RO);
+	if (ret != SECURITY_MANAGER_SUCCESS) {
+		_E("failed to add path(%s), (%d)", temp_path, ret);
+		goto FAIL;
+	}
+
+	list = g_list_first(dir_list);
+	while (list) {
+		dir_detail = (app2ext_dir_details *)list->data;
+		if (dir_detail && dir_detail->name
+			&& dir_detail->type == APP2EXT_DIR_RO) {
+			snprintf(temp_path, FILENAME_MAX, "%s/.mmc/%s",
+				application_path, dir_detail->name);
+			_D("add path (%s)", temp_path);
+			ret = security_manager_path_req_add_path(req,
+				temp_path, SECURITY_MANAGER_PATH_RO);
+			if (ret != SECURITY_MANAGER_SUCCESS) {
+				_E("failed to add path(%s), (%d)", temp_path, ret);
+				goto FAIL;
+			}
+		}
+		list = g_list_next(list);
+	}
+
+	ret = security_manager_paths_register(req);
+	if (ret != SECURITY_MANAGER_SUCCESS) {
+		_E("failed to register path (%d)", ret);
+		goto FAIL;
+	}
+
+	security_manager_path_req_free(req);
+	return APP2EXT_SUCCESS;
+
+FAIL:
+	security_manager_path_req_free(req);
+	return APP2EXT_ERROR_SETLABEL_ERROR;
+}
 
 static int _app2sd_make_directory(const char *path, uid_t uid)
 {
@@ -802,6 +895,12 @@ int _app2sd_mount_app_content(const char *application_path, const char *pkgid,
 	if (ret) {
 		_E("create directory(%s) failed", temp_path);
 		return APP2EXT_ERROR_CREATE_DIRECTORY;
+	}
+
+	ret = _app2sd_setlabel_directory_entry(application_path, pkgid,
+		dir_list, uid);
+	if (ret) {
+		_E("failed to set label");
 	}
 
 	return ret;
