@@ -37,7 +37,7 @@
 #define APP2SD_DB_FILE tzplatform_mkpath(TZ_SYS_DB, ".app2sd.db")
 sqlite3 *app2sd_db;
 #define QUERY_CREATE_TABLE_APP2SD "CREATE TABLE IF NOT EXISTS app2sd_info " \
-	"(pkgid TEXT PRIMARY KEY NOT NULL, password TEXT NOT NULL, " \
+	"(pkgid TEXT NOT NULL, password TEXT NOT NULL, " \
 	"filename TEXT NOT NULL, uid INTEGER)"
 
 int _app2sd_initialize_db()
