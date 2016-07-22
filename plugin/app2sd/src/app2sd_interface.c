@@ -51,7 +51,6 @@ int app2sd_usr_pre_app_install(const char *pkgid, GList *dir_list, int size, uid
 #if !defined(TIZEN_FEATURE_APP2SD_DMCRYPT_ENCRYPTION)
 	char *devi = NULL;
 #endif
-	char *result = NULL;
 	char application_path[FILENAME_MAX] = { 0, };
 	char loopback_device[FILENAME_MAX] = { 0, };
 	char *encoded_id = NULL;
@@ -113,13 +112,6 @@ int app2sd_usr_pre_app_install(const char *pkgid, GList *dir_list, int size, uid
 	if (ret) {
 		_E("failed to create app2sd dirs");
 		return ret;
-	}
-
-	/* check same loopback_device existence */
-	result = (char *)_app2sd_find_associated_device(loopback_device);
-	if (result != NULL) {
-		_E("there is same associated File (%s)", loopback_device);
-		return APP2EXT_ERROR_SAME_LOOPBACK_DEVICE_EXISTS;
 	}
 
 	/* create a loopback device */
@@ -222,6 +214,7 @@ int app2sd_usr_post_app_install(const char *pkgid,
 {
 	char *device_name = NULL;
 	char application_path[FILENAME_MAX] = { 0, };
+	char application_mmc_path[FILENAME_MAX] = { 0, };
 	char loopback_device[FILENAME_MAX] = { 0, };
 	char *encoded_id = NULL;
 	int ret = APP2EXT_SUCCESS;
@@ -260,6 +253,8 @@ int app2sd_usr_post_app_install(const char *pkgid,
 		tzplatform_reset_user();
 	}
 	free(encoded_id);
+	snprintf(application_mmc_path, FILENAME_MAX - 1, "%s/.mmc",
+		application_path);
 
 	/* get the associated device node for SD card applicationer */
 #ifdef TIZEN_FEATURE_APP2SD_DMCRYPT_ENCRYPTION
@@ -325,7 +320,7 @@ int app2sd_usr_post_app_install(const char *pkgid,
 		if (ret)
 			_E("unable to delete info");
 
-		ret = _app2sd_delete_directory(application_path);
+		ret = _app2sd_delete_directory(application_mmc_path);
 		if (ret)
 			_E("unable to delete the directory (%s)", application_path);
 	} else {
@@ -702,6 +697,7 @@ END:
 int app2sd_usr_post_app_uninstall(const char *pkgid, uid_t uid)
 {
 	char application_path[FILENAME_MAX] = { 0, };
+	char application_mmc_path[FILENAME_MAX] = { 0, };
 	char loopback_device[FILENAME_MAX] = { 0, };
 	char *encoded_id = NULL;
 	int ret = APP2EXT_SUCCESS;
@@ -739,6 +735,8 @@ int app2sd_usr_post_app_uninstall(const char *pkgid, uid_t uid)
 		tzplatform_reset_user();
 	}
 	free(encoded_id);
+	snprintf(application_mmc_path, FILENAME_MAX - 1, "%s/.mmc",
+		application_path);
 
 	/* unmount the loopback encrypted pseudo device from
 	 * the application installation path
@@ -775,7 +773,7 @@ int app2sd_usr_post_app_uninstall(const char *pkgid, uid_t uid)
 		goto END;
 	}
 
-	ret = _app2sd_delete_directory(application_path);
+	ret = _app2sd_delete_directory(application_mmc_path);
 	if (ret) {
 		_E("unable to delete the directory (%s)",
 		application_path);
