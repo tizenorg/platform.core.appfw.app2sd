@@ -3,7 +3,7 @@ PROJECT(app2sd C)
 
 ### Required packages
 INCLUDE(FindPkgConfig)
-pkg_check_modules(pkgs REQUIRED libssl dlog openssl pkgmgr-info libtzplatform-config gio-2.0 glib-2.0 minizip aul)
+pkg_check_modules(pkgs REQUIRED libssl dlog openssl pkgmgr-info libtzplatform-config gio-2.0 glib-2.0 minizip aul security-manager)
 
 FOREACH(flag ${pkgs_CFLAGS})
 	SET(EXTRA_CFLAGS "${EXTRA_CFLAGS} ${flag}")
