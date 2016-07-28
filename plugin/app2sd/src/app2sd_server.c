@@ -21,6 +21,8 @@
 
 #include "app2sd_internals.h"
 
+#define APPFW_UID 301
+
 GMainLoop *app2sd_mainloop = NULL;
 
 gboolean __exit_app2sd_server(void *data)
@@ -185,6 +187,16 @@ static const gchar introspection_xml[] =
 "	</interface>"
 "</node>";
 
+static bool _app2sd_server_check_permission(uid_t sender_uid, uid_t target_uid)
+{
+	if (sender_uid != 0 && sender_uid != APPFW_UID && sender_uid != target_uid) {
+		_E("Not permitted user!, uid(%d)", sender_uid);
+		return false;
+	}
+
+	return true;
+}
+
 static void _app2sd_server_return_method_error(GDBusMethodInvocation *invocation, int result)
 {
 	GVariant *param = NULL;
@@ -214,7 +226,7 @@ static void _app2sd_server_pre_app_install(GDBusConnection *connection, const gc
 	_D("pkgid(%s), size(%d),sender_uid(%d), target_uid(%d)",
 		pkgid, size, sender_uid, target_uid);
 
-	if (sender_uid != 0 && sender_uid != target_uid) {
+	if (!_app2sd_server_check_permission(sender_uid, target_uid)) {
 		_E("Not permitted user!");
 		g_variant_iter_free(iter);
 		_app2sd_server_return_method_error(invocation,
@@ -274,7 +286,7 @@ static void _app2sd_server_post_app_install(GDBusConnection *connection, const g
 	_D("pkgid(%s), install_status(%d), sender_uid(%d), target_uid(%d)",
 		pkgid, install_status, sender_uid, target_uid);
 
-	if (sender_uid != 0 && sender_uid != target_uid) {
+	if (!_app2sd_server_check_permission(sender_uid, target_uid)) {
 		_E("Not permitted user!");
 		_app2sd_server_return_method_error(invocation,
 			APP2EXT_ERROR_OPERATION_NOT_PERMITTED);
@@ -312,7 +324,7 @@ static void _app2sd_server_pre_app_upgrade(GDBusConnection *connection, const gc
 	_D("pkgid(%s), size(%d), sender_uid(%d), target_uid(%d)",
 		pkgid, size, sender_uid, target_uid);
 
-	if (sender_uid != 0 && sender_uid != target_uid) {
+	if (!_app2sd_server_check_permission(sender_uid, target_uid)) {
 		_E("Not permitted user!");
 		g_variant_iter_free(iter);
 		_app2sd_server_return_method_error(invocation,
@@ -372,7 +384,7 @@ static void _app2sd_server_post_app_upgrade(GDBusConnection *connection, const g
 	_D("pkgid(%s), install_status(%d), sender_uid(%d), target_uid(%d)",
 		pkgid, install_status, sender_uid, target_uid);
 
-	if (sender_uid != 0 && sender_uid != target_uid) {
+	if (!_app2sd_server_check_permission(sender_uid, target_uid)) {
 		_E("Not permitted user!");
 		_app2sd_server_return_method_error(invocation,
 			APP2EXT_ERROR_OPERATION_NOT_PERMITTED);
@@ -403,7 +415,7 @@ static void _app2sd_server_pre_app_uninstall(GDBusConnection *connection, const 
 	_D("pkgid(%s), sender_uid(%d), target_uid(%d)",
 		pkgid, sender_uid, target_uid);
 
-	if (sender_uid != 0 && sender_uid != target_uid) {
+	if (!_app2sd_server_check_permission(sender_uid, target_uid)) {
 		_E("Not permitted user!");
 		_app2sd_server_return_method_error(invocation,
 			APP2EXT_ERROR_OPERATION_NOT_PERMITTED);
@@ -434,7 +446,7 @@ static void _app2sd_server_post_app_uninstall(GDBusConnection *connection, const
 	_D("pkgid(%s), sender_uid(%d), target_uid(%d)",
 		pkgid, sender_uid, target_uid);
 
-	if (sender_uid != 0 && sender_uid != target_uid) {
+	if (!_app2sd_server_check_permission(sender_uid, target_uid)) {
 		_E("Not permitted user!");
 		_app2sd_server_return_method_error(invocation,
 			APP2EXT_ERROR_OPERATION_NOT_PERMITTED);
@@ -465,7 +477,7 @@ static void _app2sd_server_ondemand_setup_init(GDBusConnection *connection, cons
 	_D("pkgid(%s), sender_uid(%d), target_uid(%d)",
 		pkgid, sender_uid, target_uid);
 
-	if (sender_uid != 0 && sender_uid != target_uid) {
+	if (!_app2sd_server_check_permission(sender_uid, target_uid)) {
 		_E("Not permitted user!");
 		_app2sd_server_return_method_error(invocation,
 			APP2EXT_ERROR_OPERATION_NOT_PERMITTED);
@@ -496,7 +508,7 @@ static void _app2sd_server_ondemand_setup_exit(GDBusConnection *connection, cons
 	_D("pkgid(%s), sender_uid(%d), target_uid(%d)",
 		pkgid, sender_uid, target_uid);
 
-	if (sender_uid != 0 && sender_uid != target_uid) {
+	if (!_app2sd_server_check_permission(sender_uid, target_uid)) {
 		_E("Not permitted user!");
 		_app2sd_server_return_method_error(invocation,
 			APP2EXT_ERROR_OPERATION_NOT_PERMITTED);
@@ -535,7 +547,7 @@ static void _app2sd_server_pre_move_installed_app(GDBusConnection *connection,
 	_D("pkgid(%s), move_type(%d),sender_uid(%d), target_uid(%d)",
 		pkgid, move_type, sender_uid, target_uid);
 
-	if (sender_uid != 0 && sender_uid != target_uid) {
+	if (!_app2sd_server_check_permission(sender_uid, target_uid)) {
 		_E("Not permitted user!");
 		g_variant_iter_free(iter);
 		_app2sd_server_return_method_error(invocation,
@@ -596,7 +608,7 @@ static void _app2sd_server_post_move_installed_app(GDBusConnection *connection,
 	_D("pkgid(%s), move_type(%d),sender_uid(%d), target_uid(%d)",
 		pkgid, move_type, sender_uid, target_uid);
 
-	if (sender_uid != 0 && sender_uid != target_uid) {
+	if (!_app2sd_server_check_permission(sender_uid, target_uid)) {
 		_E("Not permitted user!");
 		_app2sd_server_return_method_error(invocation,
 			APP2EXT_ERROR_OPERATION_NOT_PERMITTED);
@@ -627,7 +639,7 @@ static void _app2sd_server_force_clean(GDBusConnection *connection, const gchar 
 	_D("pkgid(%s), sender_uid(%d), target_uid(%d)",
 		pkgid, sender_uid, target_uid);
 
-	if (sender_uid != 0 && sender_uid != target_uid) {
+	if (!_app2sd_server_check_permission(sender_uid, target_uid)) {
 		_E("Not permitted user!");
 		_app2sd_server_return_method_error(invocation,
 			APP2EXT_ERROR_OPERATION_NOT_PERMITTED);
